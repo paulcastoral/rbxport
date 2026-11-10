@@ -71,12 +71,20 @@ def _beat_rms(path: str, edges: np.ndarray) -> np.ndarray:
                      for i in range(len(edges) - 1)])
 
 
-def vocal_map(vocals: str, instrumental: str, beats: np.ndarray, margin_db: float = 12) -> np.ndarray:
-    """True for each beat where the vocal stem is near its loudest relative to the band."""
-    edges = np.append(beats, beats[-1] + np.median(np.diff(beats)))
-    ratio = 20 * np.log10(_beat_rms(vocals, edges) / _beat_rms(instrumental, edges))
-    return ratio > np.percentile(ratio, 95) - margin_db
+def vocal_map(vocals: str, instrumental: str, beats: np.ndarray, margin_db: float = 12,
+              floor_db: float = 15) -> np.ndarray:
+    """True for each beat where the vocal stem is really singing.
 
+    Two tests: the vocal is near its own loudest relative to the band, and it
+    is loud in its own right (within `floor_db` of the track's typical sung
+    level). The second keeps a quiet intro, where a little synth bleeds into
+    the vocal stem, from passing just because the band is quiet too.
+    """
+    edges = np.append(beats, beats[-1] + np.median(np.diff(beats)))
+    vr = _beat_rms(vocals, edges)
+    ratio = 20 * np.log10(vr / _beat_rms(instrumental, edges))
+    loud = 20 * np.log10(vr / np.percentile(vr, 95)) > -floor_db
+    return (ratio > np.percentile(ratio, 95) - margin_db) & loud
 
 def first_sustained(voc: np.ndarray, need: int = 3, span: int = 4) -> int:
     """First beat where the vocal holds for `need` of `span` beats; stray blips don't count."""
@@ -95,21 +103,26 @@ def last_sustained(voc: np.ndarray, need: int = 3, span: int = 4) -> int:
 
 
 def auto_cues(beats: np.ndarray, beat_num: np.ndarray, voc: np.ndarray, loop_bars: int = 8) -> dict:
-    """Red hot cue on the first sustained vocal; memory loop of `loop_bars` ending at its bar."""
-    first = first_sustained(voc)
+    """Red hot cue on the first held vocal; a memory loop over the bars before it.
+
+    A vocal counts once it holds for 6 of 8 beats, so a stray syllable or a
+    sample in the intro doesn't. When there is no room for `loop_bars` before
+    the vocal, the loop shrinks to 4 bars, and is left out with less than that.
+    """
+    first = first_sustained(voc, need=6, span=8)
     if first >= len(beats):
-        raise ValueError("No vocal found, so there is nothing to cue on.")
+        raise ValueError("No held vocal found, so there is nothing to cue on.")
     down = np.where(beat_num == 1)[0]
     vbar = down[down <= first].max() if (down <= first).any() else down[0]
     cue = first if first - vbar > 1 else vbar  # a pickup vocal gets cued on its own beat
-    before = down[down <= vbar - 4 * loop_bars]
-    loop_start = before.max() if len(before) else down[0]
-    P = float(np.median(np.diff(beats)))
-    return {"hot_cue": {"slot": "A", "color": "red", "s": float(beats[cue])},
-            "memory_loop": {"start_s": float(beats[loop_start]),
-                            "end_s": float(beats[loop_start] + 4 * loop_bars * P)},
-            "first_vocal_beat": int(first)}
-
+    out = {"hot_cue": {"slot": "A", "color": "red", "s": float(beats[cue])}, "first_vocal_beat": int(first)}
+    room = int((vbar - down[0]) // 4) if len(down) else 0
+    bars = loop_bars if room >= loop_bars else 4 if room >= 4 else 0
+    if bars:
+        start = int(down[down <= vbar - 4 * bars].max())
+        end = beats[start + 4 * bars] if start + 4 * bars < len(beats) else beats[vbar]
+        out["memory_loop"] = {"start_s": float(beats[start]), "end_s": float(end), "bars": bars}
+    return out
 
 def extend_intro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, voc: np.ndarray,
                  inst_rms: np.ndarray | None = None, bars: int = 8, repeats: int = 2) -> dict:

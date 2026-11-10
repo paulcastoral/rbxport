@@ -86,10 +86,14 @@ def run(a) -> dict:
 
     if tool == "cues":
         r = edits.auto_cues(beats, nums, voc, a.loop_bars)
-        loop = r["memory_loop"]
+        loop = r.get("memory_loop")
+        if loop:
+            extra = (f"{loop['bars']}-bar loop {_fmt(loop['start_s'])}–{_fmt(loop['end_s'])}"
+                     + (" (only room for 4 bars before the vocal)" if loop["bars"] < a.loop_bars else "") + ".")
+        else:
+            extra = "No loop: the vocal starts too early for one."
         return {"tool": tool, "files": [], "details": r,
-                "summary": (f"First vocal at {_fmt(r['hot_cue']['s'])}; "
-                            f"{a.loop_bars}-bar loop {_fmt(loop['start_s'])}–{_fmt(loop['end_s'])}.")}
+                "summary": f"First vocal at {_fmt(r['hot_cue']['s'])}; {extra}"}
 
     edges = np.append(beats, beats[-1] + np.median(np.diff(beats)))
     inst = edits._beat_rms(s["instrumental"], edges)

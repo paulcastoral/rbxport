@@ -83,7 +83,7 @@ const SAME_CUE_MS = 60;
 
 interface CuePlan {
   hot_cue?: { s: number };
-  memory_loop?: { start_s: number; end_s: number };
+  memory_loop?: { start_s: number; end_s: number; bars?: number };
 }
 
 /**
@@ -121,10 +121,12 @@ async function placeCues(trackId: string, details: Record<string, unknown>, loop
     const outMs = Math.round(plan.memory_loop.end_s * 1000);
     if (near(inMs, true)) notes.push("loop already there");
     else {
-      const id = await backend.edits.addLoop(trackId, "memory", inMs, outMs, loopBars * 4);
+      // The tool shortens the loop when the vocal comes in early.
+      const bars = plan.memory_loop.bars ?? loopBars;
+      const id = await backend.edits.addLoop(trackId, "memory", inMs, outMs, bars * 4);
       ids.push(id);
       await backend.edits.setCueComment(id, "Mix in");
-      notes.push(`${loopBars}-bar memory loop`);
+      notes.push(`${bars}-bar memory loop`);
     }
   }
   return { ids, note: notes.length ? `Placed: ${notes.join(", ")}.` : "" };
