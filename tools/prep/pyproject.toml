@@ -2,12 +2,10 @@
 name = "rbx-prep"
 version = "0.1.0"
 description = "Set-prep helper for rbxport: grid tightening, stems, vocal-aware cues, extended intros"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11"
 license = "GPL-2.0-or-later"
 dependencies = [
   "numpy",
-  # PyTorch 2.2 (the last build for Intel Macs) needs NumPy 1.x.
-  "numpy<2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
   "scipy",
   "librosa",
   "soundfile",
@@ -17,6 +15,15 @@ dependencies = [
 
 [project.scripts]
 rbx-prep = "prep.cli:main"
+
+[tool.uv]
+# Lock for Apple Silicon (and Linux, for CI) only. A universal lock also has
+# to cover Intel Macs, whose newest PyTorch is 2.2.2, and uv then pins that
+# old version everywhere: it has no Python 3.13 build and fails to install.
+environments = [
+  "sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "sys_platform == 'linux'",
+]
 
 [build-system]
 requires = ["hatchling"]
