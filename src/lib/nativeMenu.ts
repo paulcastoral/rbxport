@@ -1,11 +1,11 @@
 export function nativeMenuLabels(t: (source: string) => string): Record<string, string> {
   return {
-    "About rbxport": t("About rbxport"),
+    "About GridBin": t("About GridBin"),
     "Settings…": t("Settings…"),
     "Check for Updates…": t("Check for Updates…"),
-    "Hide rbxport": t("Hide rbxport"),
+    "Hide GridBin": t("Hide GridBin"),
     "Hide Others": t("Hide Others"),
-    "Quit rbxport": t("Quit rbxport"),
+    "Quit GridBin": t("Quit GridBin"),
     File: t("File"),
     Import: t("Import"),
     "Import Folder…": t("Import Folder…"),

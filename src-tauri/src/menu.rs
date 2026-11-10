@@ -159,10 +159,10 @@ fn build_with_labels<R: Runtime>(app: &AppHandle<R>, labels: &Labels) -> tauri::
         MenuItemBuilder::with_id("updates", label(labels, "Check for Updates…")).build(app)?;
 
     // The application menu, whose first item macOS names after the app.
-    let mut application = SubmenuBuilder::new(app, "rbxport")
+    let mut application = SubmenuBuilder::new(app, "GridBin")
         .item(&PredefinedMenuItem::about(
             app,
-            Some(&label(labels, "About rbxport")),
+            Some(&label(labels, "About GridBin")),
             about_metadata_for_platform(app),
         )?)
         .item(&updates)
@@ -176,7 +176,7 @@ fn build_with_labels<R: Runtime>(app: &AppHandle<R>, labels: &Labels) -> tauri::
         application = application
             .item(&PredefinedMenuItem::hide(
                 app,
-                Some(&label(labels, "Hide rbxport")),
+                Some(&label(labels, "Hide GridBin")),
             )?)
             .item(&PredefinedMenuItem::hide_others(
                 app,
@@ -187,7 +187,7 @@ fn build_with_labels<R: Runtime>(app: &AppHandle<R>, labels: &Labels) -> tauri::
     let application = application
         .item(&PredefinedMenuItem::quit(
             app,
-            Some(&label(labels, "Quit rbxport")),
+            Some(&label(labels, "Quit GridBin")),
         )?)
         .build()?;
 

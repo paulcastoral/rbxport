@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "rbxport",
+  "productName": "GridBin",
   "version": "1.10.0",
-  "identifier": "com.rbxport.app",
+  "identifier": "com.paulcastoral.gridbin",
   "build": {
     "beforeDevCommand": "pnpm dev:web",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "rbxport",
+        "title": "GridBin",
         "width": 1800,
         "height": 1130,
         "minWidth": 1100,

@@ -102,7 +102,7 @@ export function UsbExportPane() {
       <label className={`${layout.summary} ${styles.option}`}>
         <span className={styles.details}>
           <strong id={`${id}-import-settings`}>{t("Import CDJ/mixer settings")}</strong>
-          <span id={`${id}-import-settings-help`} className={styles.description}>{t("Keep the USB device's CDJ and mixer settings in rbxport. Sync gives them to USB devices that have no settings of their own.")}</span>
+          <span id={`${id}-import-settings-help`} className={styles.description}>{t("Keep the USB device's CDJ and mixer settings in GridBin. Sync gives them to USB devices that have no settings of their own.")}</span>
           <span className={styles.default}>{t("Default: Off")}</span>
         </span>
         <input type="checkbox" role="switch" className={controls.toggle}

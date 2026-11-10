@@ -2150,7 +2150,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
             dbVersion: null,
           })
         : notReady(),
-    disableReadOnly: () => Promise.reject(new Error("Set RBX_DISABLE_READ_ONLY before launching rbxport to enable this override.")),
+    disableReadOnly: () => Promise.reject(new Error("Set RBX_DISABLE_READ_ONLY before launching GridBin to enable this override.")),
     rememberScreenAssets: () => Promise.resolve(),
 
     // A copy, like the real backend: handing out the internal array lets a

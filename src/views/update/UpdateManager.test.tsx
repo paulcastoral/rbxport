@@ -94,14 +94,14 @@ describe("UpdateManager", () => {
 
   it("says the running version is the latest", () => {
     mount({ phase: "upToDate", currentVersion: "0.4.0" });
-    expect(text()).toContain("rbxport 0.4.0 is the latest version.");
+    expect(text()).toContain("GridBin 0.4.0 is the latest version.");
     expect(buttons()).toEqual(["OK"]);
     expect(host.querySelector('[aria-label="Close"]')).not.toBeNull();
   });
 
   it("a Microsoft Store install points to the Store, with only a way out", () => {
     mount({ phase: "store", currentVersion: "1.2.0" });
-    expect(text()).toContain("This copy of rbxport is from the Microsoft Store. Get updates from the Microsoft Store.");
+    expect(text()).toContain("This copy of GridBin is from the Microsoft Store. Get updates from the Microsoft Store.");
     expect(text()).not.toContain("latest version");
     expect(buttons()).toEqual(["OK"]);
     click("OK");
@@ -110,7 +110,7 @@ describe("UpdateManager", () => {
 
   it("a Nix install points to its Nix channel, with only a way out (#177)", () => {
     mount({ phase: "nix", currentVersion: "1.3.0" });
-    expect(text()).toContain("This copy of rbxport was installed with Nix. Get updates through your Nix channel.");
+    expect(text()).toContain("This copy of GridBin was installed with Nix. Get updates through your Nix channel.");
     expect(text()).not.toContain("latest version");
     expect(text()).not.toContain("Microsoft Store");
     expect(buttons()).toEqual(["OK"]);
@@ -172,7 +172,7 @@ describe("UpdateManager", () => {
 
   it("an update in place says the next launch runs it, and offers to restart now", () => {
     mount({ phase: "ready", check: CHECK, ready: { version: "0.6.0", installed: true } });
-    expect(text()).toContain("The latest version has been downloaded. It will be used the next time rbxport opens.");
+    expect(text()).toContain("The latest version has been downloaded. It will be used the next time GridBin opens.");
     expect(host.querySelector('[role="progressbar"]')).toBeNull();
     expect(host.querySelectorAll("h3")).toHaveLength(2);
     expect(buttons()).toEqual(["Later", "Restart Now"]);

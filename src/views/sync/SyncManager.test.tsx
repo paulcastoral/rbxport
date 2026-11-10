@@ -581,7 +581,7 @@ describe("SyncManager", () => {
     expect(host.querySelector('button[aria-label="Import selected iTunes playlists"]')).toBeNull();
     expect(host.textContent).not.toContain("iTunes");
     expect(itunesDefault).not.toHaveBeenCalled();
-    expect([...host.querySelectorAll("section")].map((c) => c.getAttribute("aria-label"))).toEqual(["rbxport", "Device"]);
+    expect([...host.querySelectorAll("section")].map((c) => c.getAttribute("aria-label"))).toEqual(["GridBin", "Device"]);
   });
 
   it("imports only the ticked iTunes playlists and refreshes the library column", async () => {

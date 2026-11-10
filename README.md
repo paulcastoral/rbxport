@@ -1,3 +1,23 @@
+# GridBin
+
+GridBin is a fast, focused DJ **prep** app: it analyzes, grids, tags, cues and
+exports to USB for club players. It doesn't perform live.
+
+GridBin is a fork of [rbxport](https://github.com/chrisle/rbxport) by TRIODE,
+and builds on its library, analysis, grid editor and USB export. GridBin adds
+set-prep tools (see `tools/prep`): grid tightening and auto-warp for drifting
+tracks, vocal-aware cues, extended intros and outros, and stems, in an EDIT tab
+and an EDITOR layout.
+
+Like rbxport, GridBin is free software under the GNU General Public License,
+version 2 or later. It is not affiliated with rbxport, AlphaTheta, Pioneer DJ or
+Denon DJ.
+
+Report GridBin bugs at https://github.com/paulcastoral/rbxport/issues.
+rbxport's own documentation follows.
+
+---
+
 <p align="center">
   <a href="https://rbxport.com">
     <img src="docs/assets/brand/combined/rbxport-logo-color-white.png" alt="rbxport" width="360">

@@ -150,15 +150,15 @@ export function AboutPane() {
   const statusText = updateStatus.kind === "checking"
     ? t("Checking for updates…")
     : updateStatus.kind === "store"
-    ? t("This copy of rbxport is from the Microsoft Store. Get updates from the Microsoft Store.")
+    ? t("This copy of GridBin is from the Microsoft Store. Get updates from the Microsoft Store.")
     : updateStatus.kind === "nix"
-    ? t("This copy of rbxport was installed with Nix. Get updates through your Nix channel.")
+    ? t("This copy of GridBin was installed with Nix. Get updates through your Nix channel.")
     : updateStatus.kind === "upToDate"
-    ? t("rbxport v{version} is up to date.", { version: updateStatus.version })
+    ? t("GridBin v{version} is up to date.", { version: updateStatus.version })
     : updateStatus.kind === "available"
     ? t("Update available v{version}.", { version: updateStatus.version })
     : updateStatus.kind === "ready"
-    ? t("Update v{version} downloaded — restart rbxport to use it.", { version: updateStatus.version })
+    ? t("Update v{version} downloaded — restart GridBin to use it.", { version: updateStatus.version })
     : null;
 
   // Done when the last event's downloaded byte count reached the total; the
@@ -171,7 +171,7 @@ export function AboutPane() {
       <section className={styles.section} aria-label="About">
         <div className={styles.aboutHeader}>
           <div>
-            <h1 className={styles.aboutName}>rbxport</h1>
+            <h1 className={styles.aboutName}>GridBin</h1>
             <p className={styles.aboutVersion} data-testid="about-version">v{version ?? "—"}</p>
           </div>
           <Button disabled={updateStatus.kind === "checking"} onClick={checkForUpdates}>
@@ -241,7 +241,7 @@ export function AboutPane() {
         <details>
           <summary>Licence</summary>
           <p className={styles.aboutLine}>
-            rbxport is free software, licensed under the GNU General Public License version 2 or, at your
+            GridBin is free software, licensed under the GNU General Public License version 2 or, at your
             option, any later version. It comes with no warranty. It includes the Rubber Band Library
             by Particular Programs Ltd., under the same licence.
           </p>
@@ -249,7 +249,7 @@ export function AboutPane() {
         <details>
           <summary>Disclaimer</summary>
           <p className={styles.aboutLine}>
-            rbxport is an independent project and is not affiliated with, endorsed by, or sponsored by
+            GridBin is an independent project and is not affiliated with, endorsed by, or sponsored by
             AlphaTheta Corporation, Pioneer DJ, or any other third party. rekordbox, CDJ, XDJ and
             PRO DJ LINK are trademarks of their respective owners. Back up your library before using
             any feature that writes to it.

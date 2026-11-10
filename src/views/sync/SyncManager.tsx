@@ -946,9 +946,9 @@ export function SyncManager({ windowed = false, onClose, onSynced, onReady, onOp
         </div>
         </> : null}
 
-        <section className={styles.column} aria-label="rbxport">
+        <section className={styles.column} aria-label="GridBin">
           <div className={styles.headingRow}>
-            <div><h2 className={styles.heading}>rbxport</h2><p className={styles.columnNote}>{selectedCount} of {playlists.length} playlists selected</p></div>
+            <div><h2 className={styles.heading}>GridBin</h2><p className={styles.columnNote}>{selectedCount} of {playlists.length} playlists selected</p></div>
             <button type="button" className={styles.textButton} disabled={busy || selectedCount === 0}
               onClick={() => setTicked(new Set())}>Clear selection</button>
           </div>

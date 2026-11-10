@@ -107,7 +107,7 @@ export function StatusBar({
           onOpenLog();
         } : undefined}
       >
-        rbxport
+        GridBin
         {version === null ? null : <> <span className={styles.version}>{version}</span></>}
       </span>
       {readOnly ? (

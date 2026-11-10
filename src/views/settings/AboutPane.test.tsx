@@ -138,7 +138,7 @@ describe("AboutPane › Updates", () => {
     readyUpdate.mockResolvedValue({ version: "0.5.0", installed: true });
     mount();
     await settle();
-    expect(section().textContent).toContain("Update v0.5.0 downloaded — restart rbxport to use it.");
+    expect(section().textContent).toContain("Update v0.5.0 downloaded — restart GridBin to use it.");
     expect(checkForUpdate).not.toHaveBeenCalled();
   });
 
@@ -150,7 +150,7 @@ describe("AboutPane › Updates", () => {
     act(() => checkButton().click());
     await settle();
     expect(downloadUpdate).not.toHaveBeenCalled();
-    expect(section().textContent).toContain("rbxport v0.4.0 is up to date.");
+    expect(section().textContent).toContain("GridBin v0.4.0 is up to date.");
   });
 
   it("the button in a Microsoft Store install points to the Store and downloads nothing", async () => {
@@ -161,7 +161,7 @@ describe("AboutPane › Updates", () => {
     act(() => checkButton().click());
     await settle();
     expect(downloadUpdate).not.toHaveBeenCalled();
-    expect(section().textContent).toContain("This copy of rbxport is from the Microsoft Store. Get updates from the Microsoft Store.");
+    expect(section().textContent).toContain("This copy of GridBin is from the Microsoft Store. Get updates from the Microsoft Store.");
     expect(section().textContent).not.toContain("is up to date");
   });
 
@@ -173,7 +173,7 @@ describe("AboutPane › Updates", () => {
     act(() => checkButton().click());
     await settle();
     expect(downloadUpdate).not.toHaveBeenCalled();
-    expect(section().textContent).toContain("This copy of rbxport was installed with Nix. Get updates through your Nix channel.");
+    expect(section().textContent).toContain("This copy of GridBin was installed with Nix. Get updates through your Nix channel.");
     expect(section().textContent).not.toContain("is up to date");
   });
 

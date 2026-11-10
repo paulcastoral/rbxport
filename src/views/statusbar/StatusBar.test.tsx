@@ -29,7 +29,7 @@ it("opens the application log when the name and version are right-clicked", () =
   act(() => root.render(<StatusBar version="1.2.3" onOpenLog={onOpenLog} />));
 
   const logo = host.querySelector<HTMLElement>("footer > span");
-  expect(logo?.textContent).toBe("rbxport 1.2.3");
+  expect(logo?.textContent).toBe("GridBin 1.2.3");
   const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
   act(() => {
     logo?.dispatchEvent(event);

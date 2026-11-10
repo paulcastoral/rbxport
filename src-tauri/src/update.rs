@@ -360,12 +360,31 @@ fn bundle_name(bundle: Option<&BundleType>) -> &'static str {
 /// Network I/O, so it is awaited on the plugin's own client rather than run
 /// on the command's thread. A build that cannot reach the bucket reports
 /// that plainly rather than as "up to date".
+/// This build is `GridBin`, not rbxport: see `check_for_update`.
+const GRIDBIN_FORK: bool = true;
+
 #[tauri::command]
 pub async fn check_for_update(
     app: AppHandle,
     updates: tauri::State<'_, std::sync::Arc<Updates>>,
 ) -> AppResult<UpdateCheckDto> {
     let current_version = app.package_info().version.to_string();
+    // GridBin is a fork. The built-in feed is rbxport's, signed with TRIODE's
+    // key, and taking it would replace GridBin with rbxport. Until GridBin
+    // publishes its own signed feed, every check reports "up to date".
+    if GRIDBIN_FORK {
+        *updates.pending.lock() = None;
+        return Ok(UpdateCheckDto {
+            current_version,
+            version: None,
+            date: None,
+            changes: Vec::new(),
+            ready: None,
+            store_install: false,
+            nix_install: false,
+            previous_failure: updates.previous_failure.lock().take(),
+        });
+    }
     if store_install() {
         *updates.pending.lock() = None;
         return Ok(store_check(current_version));

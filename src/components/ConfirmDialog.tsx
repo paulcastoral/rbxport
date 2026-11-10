@@ -45,7 +45,7 @@ export function ConfirmHost() {
   }, [current, answer]);
 
   if (!current) return null;
-  const title = current.labels?.title ?? "rbxport";
+  const title = current.labels?.title ?? "GridBin";
   return (
     <div className={styles.backdrop} role="presentation">
       <div className={styles.window} role="alertdialog" aria-modal="true" aria-label={title}

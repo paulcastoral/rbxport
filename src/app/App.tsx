@@ -493,7 +493,9 @@ function AppBody() {
   }, []);
   const [reportOpen, setReportOpen] = useState(false);
   const openReport = useCallback(() => {
-    void getBackend().then(backend => backend.openReportWindow()).then(opened => { if (!opened) setReportOpen(true); });
+    // GridBin: reports go to the fork's own GitHub issues; rbxport's report
+    // service is TRIODE's, for rbxport's own bugs.
+    void getBackend().then(backend => backend.openUrl("https://github.com/paulcastoral/rbxport/issues/new"));
   }, []);
   // The Log window, the same way again: clicking the status bar's message
   // opens it, or brings the open one to the front.
@@ -3259,7 +3261,7 @@ function AppBody() {
         {/* What the app is costing, in the corner: its own component, so a
             reading does not re-render the window around it. */}
         <AppCost className={styles.cost} />
-        <span className={styles.appName}>rbxport</span>
+        <span className={styles.appName}>GridBin</span>
       </div>
       <ConnectedTopBar
         clock={clock}
