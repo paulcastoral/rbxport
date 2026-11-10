@@ -2,10 +2,12 @@
 name = "rbx-prep"
 version = "0.1.0"
 description = "Set-prep helper for rbxport: grid tightening, stems, vocal-aware cues, extended intros"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 license = "GPL-2.0-or-later"
 dependencies = [
   "numpy",
+  # PyTorch 2.2 (the last build for Intel Macs) needs NumPy 1.x.
+  "numpy<2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
   "scipy",
   "librosa",
   "soundfile",

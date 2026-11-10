@@ -103,7 +103,15 @@ pub async fn prep_run(
         // The JSON is the last line; uv and Demucs print progress before it.
         let last = stdout.lines().rev().find(|l| l.trim_start().starts_with('{')).unwrap_or("");
         let value: serde_json::Value = serde_json::from_str(last).map_err(|e| {
-            AppError::new(ErrorKind::Internal, format!("The {tool} tool failed."))
+            // No JSON: the tool never ran (setup failed) or crashed. The last
+            // `error:` line from uv or Python is the part worth reading.
+            let reason = stderr
+                .lines()
+                .rev()
+                .find(|l| l.trim_start().starts_with("error:") || l.contains("Error"))
+                .unwrap_or("see the log for details")
+                .trim();
+            AppError::new(ErrorKind::Internal, format!("The {tool} tool could not run: {reason}"))
                 .with_detail(format!("{e}\nstdout: {stdout}\nstderr: {stderr}"))
         })?;
         if let Some(error) = value.get("error").and_then(|v| v.as_str()) {
