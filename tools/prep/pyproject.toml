@@ -1,0 +1,24 @@
+[project]
+name = "rbx-prep"
+version = "0.1.0"
+description = "Set-prep helper for rbxport: grid tightening, stems, vocal-aware cues, extended intros"
+requires-python = ">=3.11"
+license = "GPL-2.0-or-later"
+dependencies = [
+  "numpy",
+  "scipy",
+  "librosa",
+  "soundfile",
+  "pyrekordbox",
+  "demucs",
+]
+
+[project.scripts]
+rbx-prep = "prep.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["prep"]
