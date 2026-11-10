@@ -119,3 +119,25 @@
   background: #222;
   color: #9ecbff;
 }
+
+/* ------------------------------------------------------ stop / undo */
+
+.stop, .undo {
+  flex: none;
+  height: 22px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 2px;
+  font-size: var(--f-size-xs);
+  font-weight: 700;
+  cursor: default;
+}
+.stop { background: #8a1f1f; color: #fff; }
+.stop:hover { background: #a82626; }
+.undo { background: var(--c-deck-button); color: var(--c-icon-on); }
+.undo:hover { background: #383838; color: #fff; }
+.header .stop { margin-left: auto; }
+.compactActions { flex: none; padding-top: calc(var(--s-pad-section-h) + 2px); }
+.entry { align-items: center; }
+.entryText { flex: 1; min-width: 0; }
+.entry[data-undone] .entryText { color: var(--c-text-dim); }

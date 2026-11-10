@@ -75,7 +75,9 @@ def run(a) -> dict:
         name = "Instrumental" if tool == "instrumental" else "Acapella"
         dst = out / f"{track.stem} ({name}).wav"
         if not dst.exists():
-            dst.write_bytes(Path(src).read_bytes())
+            part = dst.with_name(f".{dst.name}.part")
+            part.write_bytes(Path(src).read_bytes())
+            part.replace(dst)
         return {"tool": tool, "files": [str(dst)], "details": s, "summary": f"{name} ready."}
 
     beats, nums = need_grid()

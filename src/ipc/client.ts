@@ -645,8 +645,10 @@ async function realBackend(): Promise<Backend> {
     },
     onTagListChanged: (listener) => subscribe("tag-list:changed", () => listener()),
     onEditHistory: (listener) => subscribe<EditHistoryState>("edit-history:changed", listener),
-    prep: (trackId: string, tool: PrepTool, options?: PrepOptions) =>
-      invoke<PrepResult>("prep_run", { trackId, tool, options: options ?? {} }),
+    prep: (trackId: string, tool: PrepTool, options?: PrepOptions, runId?: string) =>
+      invoke<PrepResult>("prep_run", { trackId, tool, options: options ?? {}, runId }),
+    prepCancel: (runId: string) => invoke<void>("prep_cancel", { runId }),
+    prepUndo: (files: string[]) => invoke<void>("prep_undo", { files }),
     edits: {
       createPlaylist: (name, parent, index) => invoke<number>("create_playlist", { name, parent, index }),
       createSmartPlaylist: (name, parent, rule) => invoke<number>("create_smart_playlist", { name, parent, rule }),

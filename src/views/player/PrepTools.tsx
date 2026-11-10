@@ -38,40 +38,78 @@ export const PREP_TOOLS: readonly ToolSpec[] = [
 const GROUPS = ["GRID", "CUES", "EDIT", "STEMS"] as const;
 
 interface Run {
+  id: string;
   tool: PrepTool;
   result?: PrepResult;
   error?: string;
+  /** Stopped from the panel: not an error, nothing was kept. */
+  stopped?: boolean;
+  /** Its files went to the Trash. */
+  undone?: boolean;
 }
 
 function message(error: unknown): string {
   if (typeof error === "string") return error;
-  if (error && typeof error === "object" && "message" in error) return String((error).message);
+  if (error && typeof error === "object" && "message" in error) return String(error.message);
   return "The tool failed.";
+}
+
+function isCancelled(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && "kind" in error && error.kind === "cancelled");
 }
 
 function fileName(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
 }
 
+/** A finished run in one line. */
+function describe(entry: Run): string {
+  if (entry.stopped) return "Stopped. Nothing was kept from this run.";
+  if (entry.undone) return "Undone: its files are in the Trash.";
+  return entry.result?.summary ?? "";
+}
+
 /** One deck's prep state: what is running and what has run on its track. */
 export function usePrep(trackId: string | null) {
-  const [busy, setBusy] = useState<PrepTool | null>(null);
+  const [busy, setBusy] = useState<{ tool: PrepTool; id: string } | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
-  // A new track starts a new history.
-  useEffect(() => { setRuns([]); setBusy(null); }, [trackId]);
+  const [error, setError] = useState<string | null>(null);
+  // A new track starts a new history. A run still going keeps going; its
+  // files stay, and Stop is still offered until it ends.
+  useEffect(() => { setRuns([]); setError(null); }, [trackId]);
+
   const run = useCallback(async (tool: PrepTool, options?: PrepOptions) => {
     if (!trackId || busy) return;
-    setBusy(tool);
+    const id = crypto.randomUUID();
+    setBusy({ tool, id });
+    setError(null);
     try {
-      const result = await (await getBackend()).prep(trackId, tool, options);
-      setRuns((was) => [{ tool, result }, ...was]);
-    } catch (error) {
-      setRuns((was) => [{ tool, error: message(error) }, ...was]);
+      const result = await (await getBackend()).prep(trackId, tool, options, id);
+      setRuns((was) => [{ id, tool, result }, ...was]);
+    } catch (failure) {
+      setRuns((was) => [isCancelled(failure) ? { id, tool, stopped: true } : { id, tool, error: message(failure) }, ...was]);
     } finally {
       setBusy(null);
     }
   }, [trackId, busy]);
-  return { busy, runs, run };
+
+  const stop = useCallback(async () => {
+    if (busy) await (await getBackend()).prepCancel(busy.id);
+  }, [busy]);
+
+  const undo = useCallback(async (id: string) => {
+    const entry = runs.find((r) => r.id === id);
+    const files = entry?.result?.files ?? [];
+    if (!entry || entry.undone || files.length === 0) return;
+    try {
+      await (await getBackend()).prepUndo(files);
+      setRuns((was) => was.map((r) => (r.id === id ? { ...r, undone: true } : r)));
+    } catch (failure) {
+      setError(message(failure));
+    }
+  }, [runs]);
+
+  return { busy, runs, run, stop, undo, error };
 }
 
 export interface PrepToolsProps {
@@ -82,7 +120,7 @@ export interface PrepToolsProps {
 }
 
 export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
-  const { busy, runs, run } = usePrep(trackId);
+  const { busy, runs, run, stop, undo, error } = usePrep(trackId);
   const [bars, setBars] = useState(8);
   const [repeats, setRepeats] = useState(2);
   const [loopBars, setLoopBars] = useState(8);
@@ -96,12 +134,12 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
       key={tool.id}
       type="button"
       className={styles.tool}
-      data-busy={busy === tool.id || undefined}
+      data-busy={busy?.tool === tool.id || undefined}
       disabled={disabled}
       title={tool.hint + (tool.slow ? " (splits stems first: can take a few minutes)" : "")}
       onClick={() => { void run(tool.id, options(tool.id)); }}
     >
-      <span className={styles.toolLabel}>{busy === tool.id ? "WORKING…" : tool.label}</span>
+      <span className={styles.toolLabel}>{busy?.tool === tool.id ? "WORKING…" : tool.label}</span>
       {compact ? null : <span className={styles.toolHint}>{tool.hint}</span>}
     </button>
   );
@@ -113,9 +151,18 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
           <span className={styles.groupLabel}>PREP</span>
           <div className={styles.compactButtons}>{PREP_TOOLS.map(button)}</div>
         </section>
+        <div className={styles.compactActions}>
+          {busy ? (
+            <button type="button" className={styles.stop} onClick={() => { void stop(); }}>STOP</button>
+          ) : latest?.result?.files.length && !latest.undone ? (
+            <button type="button" className={styles.undo} title="Move the files this run made to the Trash" onClick={() => { void undo(latest.id); }}>UNDO</button>
+          ) : null}
+        </div>
         <div className={styles.compactStatus} aria-live="polite">
           {trackId === null ? "Load a track to prep it." :
-            latest ? (latest.error ? <span className={styles.error}>{latest.error}</span> : latest.result?.summary) :
+            error ? <span className={styles.error}>{error}</span> :
+            busy ? `${PREP_TOOLS.find((t) => t.id === busy.tool)?.label ?? ""} running…` :
+            latest ? describe(latest) :
             "Every tool writes a new file; the track stays as it is."}
         </div>
       </div>
@@ -127,6 +174,11 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
       <header className={styles.header}>
         <span className={styles.title}>EDITOR</span>
         <span className={styles.track}>{trackId === null ? "Load a track into the deck to prep it." : title}</span>
+        {busy ? (
+          <button type="button" className={styles.stop} onClick={() => { void stop(); }}>
+            STOP {PREP_TOOLS.find((t) => t.id === busy.tool)?.label}
+          </button>
+        ) : null}
       </header>
       <div className={styles.groups}>
         {GROUPS.map((group) => (
@@ -164,17 +216,19 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
       <ol className={styles.log} aria-label="Results" aria-live="polite">
         {runs.length === 0 ? (
           <li className={styles.empty}>Results show here. Every tool writes a new file next to the track; the track itself is never changed.</li>
-        ) : runs.map((entry, at) => (
-          <li key={runs.length - at} className={styles.entry}>
+        ) : runs.map((entry) => (
+          <li key={entry.id} className={styles.entry} data-undone={entry.undone || undefined}>
             <span className={styles.entryTool}>{PREP_TOOLS.find((t) => t.id === entry.tool)?.label}</span>
-            {entry.error ? <span className={styles.error}>{entry.error}</span> : (
-              <span>
-                {entry.result?.summary}
-                {entry.result?.files.map((f) => <span key={f} className={styles.file}>{fileName(f)}</span>)}
-              </span>
-            )}
+            <span className={styles.entryText}>
+              {entry.error ? <span className={styles.error}>{entry.error}</span> : describe(entry)}
+              {entry.undone ? null : entry.result?.files.map((f) => <span key={f} className={styles.file}>{fileName(f)}</span>)}
+            </span>
+            {entry.result?.files.length && !entry.undone ? (
+              <button type="button" className={styles.undo} title="Move the files this run made to the Trash" onClick={() => { void undo(entry.id); }}>UNDO</button>
+            ) : null}
           </li>
         ))}
+        {error ? <li className={styles.entry}><span className={styles.entryTool}>UNDO</span><span className={styles.error}>{error}</span></li> : null}
       </ol>
     </div>
   );

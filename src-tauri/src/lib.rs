@@ -629,6 +629,8 @@ pub fn run() {
             // and is refused while rekordbox runs, like the edits above.
             grid::grid_state,
             prep::prep_run,
+            prep::prep_cancel,
+            prep::prep_undo,
             grid::grid_edit,
             grid::grid_undo,
             grid::grid_redo,

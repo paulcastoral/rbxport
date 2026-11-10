@@ -313,7 +313,11 @@ export interface Backend {
    * `rbx-prep` folder next to the track and never changes the track, its
    * grid or its cues. Slow tools (stems) take minutes.
    */
-  prep(trackId: string, tool: PrepTool, options?: PrepOptions): Promise<PrepResult>;
+  prep(trackId: string, tool: PrepTool, options?: PrepOptions, runId?: string): Promise<PrepResult>;
+  /** Stops a running prep tool; its `prep` call rejects with kind `cancelled`. */
+  prepCancel(runId: string): Promise<void>;
+  /** Undoes a run by moving the files it wrote to the Trash. Only `rbx-prep` files. */
+  prepUndo(files: string[]): Promise<void>;
 
   /**
    * Called when the library changes underneath us — after an edit, or when

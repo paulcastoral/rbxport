@@ -2110,10 +2110,20 @@ export function createMockBackend(options: MockOptions = {}): Backend {
     return path;
   };
 
+  const prepRuns = new Map<string, () => void>();
   return {
     // Set-prep tools: no audio here, so canned answers shaped like rbx-prep's.
-    prep: async (trackId, tool, options = {}) => {
-      await new Promise((resolve) => setTimeout(resolve, tool === "instrumental" || tool === "acapella" ? 1500 : 600));
+    prepCancel: (runId) => {
+      prepRuns.get(runId)?.();
+      return Promise.resolve();
+    },
+    prepUndo: () => Promise.resolve(),
+    prep: async (trackId, tool, options = {}, runId) => {
+      // Stems take minutes for real; long enough here to try Stop.
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, tool === "instrumental" || tool === "acapella" || tool === "cues" ? 4000 : 600);
+        if (runId) prepRuns.set(runId, () => { clearTimeout(timer); reject(Object.assign(new Error("Stopped. Nothing was kept from this run."), { kind: "cancelled" })); });
+      }).finally(() => { if (runId) prepRuns.delete(runId); });
       const bars = options.bars ?? 8;
       const repeats = options.repeats ?? 2;
       const file = (suffix: string) => `/Users/mock/Music/rbx-prep/Track ${trackId} (${suffix}).wav`;

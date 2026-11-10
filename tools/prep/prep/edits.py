@@ -1,7 +1,9 @@
 """Audio edits: auto-warp, stems, vocal-aware cues, extended intros."""
 from __future__ import annotations
 
+import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -27,19 +29,39 @@ def autowarp(src: str, dst: str, beats: np.ndarray, bpm: float | None = None) ->
         tmap.write_text("".join(f"{round(s * sr)} {round(d * sr)}\n" for s, d in zip(beats, target)))
         wav = Path(tmp, "src.wav")
         subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", src, str(wav)], check=True)
+        part = Path(tmp, "warped.wav")
         subprocess.run(["rubberband", "-3", "--timemap", str(tmap), "--duration", f"{end_tgt:.4f}",
-                        str(wav), dst], check=True, capture_output=True)
+                        str(wav), str(part)], check=True, capture_output=True)
+        shutil.move(str(part), dst)
     stretch = float(np.abs(np.diff(beats) / P - 1).max() * 100)
     return {"bpm": bpm, "first_beat_s": float(beats[0]), "max_stretch_pct": round(stretch, 2),
             "beats": target.tolist()}
 
 
 def stems(src: str, out_dir: str, model: str = "htdemucs") -> dict:
-    """Vocal / instrumental split with Demucs. Returns the two stem paths."""
-    subprocess.run(["python", "-m", "demucs", "--two-stems", "vocals", "-n", model, "-o", out_dir, src],
-                   check=True)
-    d = Path(out_dir, model, Path(src).stem)
-    return {"vocals": str(d / "vocals.wav"), "instrumental": str(d / "no_vocals.wav")}
+    """Vocal / instrumental split with Demucs. Returns the two stem paths.
+
+    Demucs writes into a scratch folder that is moved into place only once
+    both stems exist, so a stopped run never leaves half a cache behind.
+    """
+    final = Path(out_dir, model, Path(src).stem)
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=out_dir, prefix=".stems-") as tmp:
+        subprocess.run([sys.executable, "-m", "demucs", "--two-stems", "vocals", "-n", model, "-o", tmp, src],
+                       check=True)
+        made = Path(tmp, model, Path(src).stem)
+        final.parent.mkdir(parents=True, exist_ok=True)
+        if final.exists():
+            shutil.rmtree(final)
+        made.rename(final)
+    return {"vocals": str(final / "vocals.wav"), "instrumental": str(final / "no_vocals.wav")}
+
+
+def write_atomic(dst: str, data: np.ndarray, sr: int) -> None:
+    """Write next to `dst` and rename over it, so a stopped run leaves no partial file."""
+    part = Path(dst).with_name(f".{Path(dst).name}.part")
+    sf.write(str(part), data, sr, subtype="PCM_16", format="WAV")
+    part.replace(dst)
 
 
 def _beat_rms(path: str, edges: np.ndarray) -> np.ndarray:
@@ -121,7 +143,7 @@ def extend_intro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, vo
     for k in range(repeats):  # each join jumps from "would continue at s1" back to s0
         p = s1 + k * L
         out[p:p + xf] = y[s1:s1 + xf] * (1 - f) + y[s0:s0 + xf] * f
-    sf.write(dst, out, sr, subtype="PCM_16")
+    write_atomic(dst, out, sr)
     return {"looped_from_s": float(beats[d]), "bars": bars, "repeats": repeats,
             "added_s": repeats * L / sr, "shift_cues_by_s": repeats * L / sr}
 
@@ -161,6 +183,6 @@ def extend_outro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, vo
     for k in range(repeats):
         p = s1 + k * L
         out[p:p + xf] = y[s1:s1 + xf] * (1 - f) + y[s0:s0 + xf] * f
-    sf.write(dst, out, sr, subtype="PCM_16")
+    write_atomic(dst, out, sr)
     return {"looped_from_s": float(beats[d]), "bars": bars, "repeats": repeats,
             "added_s": repeats * L / sr, "shift_cues_by_s": 0.0}

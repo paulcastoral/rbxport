@@ -5,9 +5,12 @@
 //! the track's file, its grid or its cues. The tools read the track's current
 //! grid from its analysis `.DAT`, so a track has to be analysed first.
 
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::Arc;
+use std::process::{Command, Stdio};
+use std::sync::{Arc, OnceLock};
+
+use parking_lot::Mutex;
 
 use serde::Deserialize;
 use tauri::State;
@@ -53,6 +56,19 @@ fn uv() -> PathBuf {
     "uv".into()
 }
 
+/// Running tools by the run id the UI gave them, to the process group to
+/// signal on Stop: uv, Python and the Demucs child all share one group.
+fn running() -> &'static Mutex<HashMap<String, u32>> {
+    static RUNNING: OnceLock<Mutex<HashMap<String, u32>>> = OnceLock::new();
+    RUNNING.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Runs were stopped from the UI, so a non-zero exit is "Stopped", not a failure.
+fn stopped() -> &'static Mutex<HashSet<String>> {
+    static STOPPED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    STOPPED.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri's State extractor is injected by value")]
 pub async fn prep_run(
@@ -60,6 +76,7 @@ pub async fn prep_run(
     track_id: String,
     tool: String,
     options: Option<PrepOptions>,
+    run_id: Option<String>,
 ) -> AppResult<serde_json::Value> {
     if !TOOLS.contains(&tool.as_str()) {
         return Err(AppError::new(ErrorKind::Malformed, "Unknown prep tool."));
@@ -68,6 +85,7 @@ pub async fn prep_run(
     let share = state.share_root();
     let state = Arc::clone(&state);
     let options = options.unwrap_or_default();
+    let run_id = run_id.unwrap_or_else(|| format!("{track_id}:{tool}"));
     blocking("prep_run", move || {
         let row = library
             .row_of(&track_id)
@@ -93,11 +111,26 @@ pub async fn prep_run(
         if let Some(v) = options.repeats { cmd.arg("--repeats").arg(v.to_string()); }
         if let Some(v) = options.loop_bars { cmd.arg("--loop-bars").arg(v.to_string()); }
         if let Some(v) = options.bpm { cmd.arg("--bpm").arg(v.to_string()); }
+        cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            // Its own group, so Stop reaches Demucs as well as uv.
+            cmd.process_group(0);
+        }
 
-        tracing::info!(tool = %tool, track = %track_id, "prep: running rbx-prep");
-        let output = cmd.output().map_err(|e| {
+        tracing::info!(tool = %tool, track = %track_id, run = %run_id, "prep: running rbx-prep");
+        let child = cmd.spawn().map_err(|e| {
             AppError::new(ErrorKind::NotFound, "Could not start the prep tools. Is uv installed (brew install uv)?").with_detail(e.to_string())
         })?;
+        running().lock().insert(run_id.clone(), child.id());
+        let output = child.wait_with_output();
+        running().lock().remove(&run_id);
+        let was_stopped = stopped().lock().remove(&run_id);
+        let output = output.map_err(|e| AppError::new(ErrorKind::Internal, "The prep tool stopped unexpectedly.").with_detail(e.to_string()))?;
+        if was_stopped {
+            return Err(AppError::new(ErrorKind::Cancelled, "Stopped. Nothing was kept from this run."));
+        }
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
         // The JSON is the last line; uv and Demucs print progress before it.
@@ -120,4 +153,79 @@ pub async fn prep_run(
         Ok(value)
     })
     .await
+}
+
+/// Stop: signals the run's whole process group. The run's own `prep_run`
+/// call then returns `Cancelled`. Unknown or finished runs are ignored.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps, reason = "a Tauri command takes owned arguments and returns AppResult like the others")]
+pub fn prep_cancel(run_id: String) -> AppResult<()> {
+    let Some(pid) = running().lock().get(&run_id).copied() else { return Ok(()) };
+    stopped().lock().insert(run_id.clone());
+    tracing::info!(run = %run_id, pid, "prep: stopping");
+    #[cfg(unix)]
+    {
+        // `kill -TERM -<pgid>`: the whole group, without an unsafe libc call.
+        let _ = Command::new("kill").arg("-TERM").arg("--").arg(format!("-{pid}")).stdout(Stdio::null()).stderr(Stdio::null()).status();
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = Command::new("taskkill").args(["/PID", &pid.to_string(), "/T", "/F"]).status();
+    }
+    Ok(())
+}
+
+/// Undo: moves files a prep run wrote to the Trash. Only files inside an
+/// `rbx-prep` folder are accepted, so this can never reach a library track.
+#[tauri::command]
+pub async fn prep_undo(files: Vec<String>) -> AppResult<()> {
+    blocking("prep_undo", move || {
+        for file in &files {
+            let path = Path::new(file);
+            let ours = path.parent().is_some_and(|p| p.components().any(|c| c.as_os_str() == "rbx-prep"));
+            if !ours {
+                return Err(AppError::new(ErrorKind::Malformed, "Undo only removes files the prep tools made.").with_detail(file.clone()));
+            }
+        }
+        for file in &files {
+            let path = Path::new(file);
+            if path.exists() {
+                trash(path).map_err(|e| AppError::new(ErrorKind::Internal, "Could not move the file to the Trash.").with_detail(format!("{file}: {e}")))?;
+            }
+        }
+        Ok(())
+    })
+    .await
+}
+
+/// The Finder's own Trash (so Put Back works) on macOS; elsewhere the
+/// freedesktop Trash, or a plain delete when there is none.
+fn trash(path: &Path) -> std::io::Result<()> {
+    #[cfg(target_os = "macos")]
+    {
+        let script = format!(
+            "tell application \"Finder\" to delete (POSIX file \"{}\" as alias)",
+            path.display().to_string().replace('\\', "\\\\").replace('"', "\\\"")
+        );
+        let status = Command::new("osascript").arg("-e").arg(script).stdout(Stdio::null()).stderr(Stdio::null()).status()?;
+        if status.success() {
+            return Ok(());
+        }
+        let home = std::env::var("HOME").unwrap_or_default();
+        let name = path.file_name().unwrap_or_default();
+        return std::fs::rename(path, Path::new(&home).join(".Trash").join(name));
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let home = std::env::var("HOME").unwrap_or_default();
+        let bin = Path::new(&home).join(".local/share/Trash/files");
+        if bin.is_dir() {
+            if let Some(name) = path.file_name() {
+                if std::fs::rename(path, bin.join(name)).is_ok() {
+                    return Ok(());
+                }
+            }
+        }
+        std::fs::remove_file(path)
+    }
 }
