@@ -28,7 +28,7 @@ interface ToolSpec {
 export const PREP_TOOLS: readonly ToolSpec[] = [
   { id: "drift", label: "CHECK DRIFT", hint: "Steady or drifting?", group: "GRID" },
   { id: "tighten", label: "TIGHTEN", hint: "Warp to a fixed BPM", group: "GRID" },
-  { id: "cues", label: "AUTO CUES", hint: "Loop + red cue at the vocal", group: "CUES", slow: true },
+  { id: "cues", label: "AUTO CUES", hint: "Places loop + red cue", group: "CUES", slow: true },
   { id: "extend-intro", label: "EXT INTRO", hint: "Loop clean intro bars", group: "EDIT", slow: true },
   { id: "extend-outro", label: "EXT OUTRO", hint: "Loop clean outro bars", group: "EDIT", slow: true },
   { id: "instrumental", label: "INSTRUMENTAL", hint: "Vocals removed", group: "STEMS", slow: true },
@@ -44,8 +44,10 @@ interface Run {
   error?: string;
   /** Stopped from the panel: not an error, nothing was kept. */
   stopped?: boolean;
-  /** Its files went to the Trash. */
+  /** Its files went to the Trash, and its cues were deleted. */
   undone?: boolean;
+  /** Cues AUTO CUES put on the track, which Undo deletes. */
+  cueIds?: string[];
 }
 
 function message(error: unknown): string {
@@ -62,11 +64,70 @@ function fileName(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
 }
 
+/** Whether a run left something Undo can take back. */
+function canUndo(entry: Run | undefined): entry is Run {
+  return Boolean(entry && !entry.undone && ((entry.result?.files.length ?? 0) > 0 || (entry.cueIds?.length ?? 0) > 0));
+}
+
 /** A finished run in one line. */
 function describe(entry: Run): string {
   if (entry.stopped) return "Stopped. Nothing was kept from this run.";
-  if (entry.undone) return "Undone: its files are in the Trash.";
+  if (entry.undone) return entry.cueIds?.length ? "Undone: its cues were removed." : "Undone: its files are in the Trash.";
   return entry.result?.summary ?? "";
+}
+
+/** rekordbox's hot-cue red, as the CUE colour menu offers it (ColorTableIndex 41). */
+const HOT_CUE_RED = 41;
+/** A cue this close to one already on the track is taken to be the same cue. */
+const SAME_CUE_MS = 60;
+
+interface CuePlan {
+  hot_cue?: { s: number };
+  memory_loop?: { start_s: number; end_s: number };
+}
+
+/**
+ * Puts AUTO CUES' answer on the track: a red hot cue named "Vocal" on the
+ * first held vocal, in pad A or the first free pad, and a memory loop named
+ * "Mix in" over the bars before it. A cue already there at the same spot is
+ * left as it is, and no existing cue is moved or replaced. Resolves to the
+ * ids it made and a line saying what it did.
+ */
+async function placeCues(trackId: string, details: Record<string, unknown>, loopBars: number): Promise<{ ids: string[]; note: string }> {
+  const backend = await getBackend();
+  const plan = details as CuePlan;
+  const existing = await backend.trackCues(trackId);
+  const ids: string[] = [];
+  const notes: string[] = [];
+  const near = (ms: number, memory: boolean) =>
+    existing.some((c) => c.memory === memory && Math.abs(c.positionMs - ms) <= SAME_CUE_MS);
+
+  if (plan.hot_cue) {
+    const ms = Math.round(plan.hot_cue.s * 1000);
+    const used = new Set(existing.filter((c) => c.letter).map((c) => c.letter));
+    const letter = "ABCDEFGH".split("").find((l) => !used.has(l));
+    if (near(ms, false)) notes.push("hot cue already there");
+    else if (!letter) notes.push("no free pad for the hot cue (A–H are full)");
+    else {
+      const id = await backend.edits.addCue(trackId, { hot: letter }, ms);
+      ids.push(id);
+      await backend.edits.setCueColour(id, HOT_CUE_RED);
+      await backend.edits.setCueComment(id, "Vocal");
+      notes.push(`red hot cue on pad ${letter}`);
+    }
+  }
+  if (plan.memory_loop) {
+    const inMs = Math.round(plan.memory_loop.start_s * 1000);
+    const outMs = Math.round(plan.memory_loop.end_s * 1000);
+    if (near(inMs, true)) notes.push("loop already there");
+    else {
+      const id = await backend.edits.addLoop(trackId, "memory", inMs, outMs, loopBars * 4);
+      ids.push(id);
+      await backend.edits.setCueComment(id, "Mix in");
+      notes.push(`${loopBars}-bar memory loop`);
+    }
+  }
+  return { ids, note: notes.length ? `Placed: ${notes.join(", ")}.` : "" };
 }
 
 /** One deck's prep state: what is running and what has run on its track. */
@@ -85,6 +146,18 @@ export function usePrep(trackId: string | null) {
     setError(null);
     try {
       const result = await (await getBackend()).prep(trackId, tool, options, id);
+      if (tool === "cues") {
+        // The tool only finds the spots; the cues themselves go on the
+        // track here, through the same edits the CUE panel uses.
+        try {
+          const placed = await placeCues(trackId, result.details, options?.loopBars ?? 8);
+          const summary = placed.note ? `${result.summary} ${placed.note}` : result.summary;
+          setRuns((was) => [{ id, tool, result: { ...result, summary }, cueIds: placed.ids }, ...was]);
+        } catch (failure) {
+          setRuns((was) => [{ id, tool, error: `Found the cues but could not place them: ${message(failure)}` }, ...was]);
+        }
+        return;
+      }
       setRuns((was) => [{ id, tool, result }, ...was]);
     } catch (failure) {
       setRuns((was) => [isCancelled(failure) ? { id, tool, stopped: true } : { id, tool, error: message(failure) }, ...was]);
@@ -100,9 +173,12 @@ export function usePrep(trackId: string | null) {
   const undo = useCallback(async (id: string) => {
     const entry = runs.find((r) => r.id === id);
     const files = entry?.result?.files ?? [];
-    if (!entry || entry.undone || files.length === 0) return;
+    const cueIds = entry?.cueIds ?? [];
+    if (!entry || entry.undone || (files.length === 0 && cueIds.length === 0)) return;
     try {
-      await (await getBackend()).prepUndo(files);
+      const backend = await getBackend();
+      if (files.length) await backend.prepUndo(files);
+      for (const cue of cueIds) await backend.edits.deleteCue(cue);
       setRuns((was) => was.map((r) => (r.id === id ? { ...r, undone: true } : r)));
     } catch (failure) {
       setError(message(failure));
@@ -154,8 +230,8 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
         <div className={styles.compactActions}>
           {busy ? (
             <button type="button" className={styles.stop} onClick={() => { void stop(); }}>STOP</button>
-          ) : latest?.result?.files.length && !latest.undone ? (
-            <button type="button" className={styles.undo} title="Move the files this run made to the Trash" onClick={() => { void undo(latest.id); }}>UNDO</button>
+          ) : canUndo(latest) ? (
+            <button type="button" className={styles.undo} title="Undo this run: its cues are removed and its files go to the Trash" onClick={() => { void undo(latest.id); }}>UNDO</button>
           ) : null}
         </div>
         <div className={styles.compactStatus} aria-live="polite">
@@ -223,8 +299,8 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
               {entry.error ? <span className={styles.error}>{entry.error}</span> : describe(entry)}
               {entry.undone ? null : entry.result?.files.map((f) => <span key={f} className={styles.file}>{fileName(f)}</span>)}
             </span>
-            {entry.result?.files.length && !entry.undone ? (
-              <button type="button" className={styles.undo} title="Move the files this run made to the Trash" onClick={() => { void undo(entry.id); }}>UNDO</button>
+            {canUndo(entry) ? (
+              <button type="button" className={styles.undo} title="Undo this run: its cues are removed and its files go to the Trash" onClick={() => { void undo(entry.id); }}>UNDO</button>
             ) : null}
           </li>
         ))}

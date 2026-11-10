@@ -88,7 +88,7 @@ def run(a) -> dict:
         r = edits.auto_cues(beats, nums, voc, a.loop_bars)
         loop = r["memory_loop"]
         return {"tool": tool, "files": [], "details": r,
-                "summary": (f"Red hot cue on the first vocal at {_fmt(r['hot_cue']['s'])}; "
+                "summary": (f"First vocal at {_fmt(r['hot_cue']['s'])}; "
                             f"{a.loop_bars}-bar loop {_fmt(loop['start_s'])}–{_fmt(loop['end_s'])}.")}
 
     edges = np.append(beats, beats[-1] + np.median(np.diff(beats)))
