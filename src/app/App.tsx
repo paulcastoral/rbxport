@@ -66,7 +66,8 @@ import { onPreviewError, stopPreview } from "@/store/usePreview";
 import { useUpdater } from "@/store/useUpdater";
 import { UpdateReadyNotice } from "@/views/update/UpdateReadyNotice";
 import { MasterOutputProvider, MasterOutputConnection, useMasterControls, useMasterDisplay } from "@/store/MasterOutput";
-import { asLayout, deckCount, isFullDeck, type PlayerLayout } from "@/lib/layout";
+import { asLayout, deckCount, hasEditorPanel, isFullDeck, type PlayerLayout } from "@/lib/layout";
+import { PrepTools } from "@/views/player/PrepTools";
 import { FIELD_LABEL } from "@/views/info/fieldLabel";
 import { SubBrowser } from "@/views/subbrowser/SubBrowser";
 import { RightRail } from "@/views/browser/RightRail";
@@ -3385,6 +3386,11 @@ function AppBody() {
             <div className={styles.zoomSlot}>
               <DualZoom onZoom={zoomBoth} onReset={resetZoom} />
             </div>
+          ) : null}
+          {/* EDITOR: the set-prep tools at full size under deck A, inside the
+              deck row so the pinned window rows stay as they are. */}
+          {hasEditorPanel(layout) ? (
+            <PrepTools trackId={playerTrack?.id ?? null} title={playerTrack ? `${playerTrack.artist}${playerTrack.artist ? " – " : ""}${playerTrack.title}` : undefined} />
           ) : null}
           <div className={styles.playerGutter} aria-hidden />
         </div>

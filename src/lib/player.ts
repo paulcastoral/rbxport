@@ -420,7 +420,8 @@ export function phraseSpans(
 export const READOUT_COLUMNS: readonly SortColumn[] = ["key", "bpm"];
 
 /** Which set of controls the pad row is showing. */
-export type PadMode = "cue" | "grid";
+/** The pad row's tabs: rekordbox's CUE/LOOP and GRID, plus the set-prep EDIT tab. */
+export type PadMode = "cue" | "grid" | "edit";
 
 /** Which list the panel beside the deck is showing. */
 export type CuePanel = "memory" | "hotCue" | "info";

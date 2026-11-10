@@ -16,6 +16,9 @@ import type {
   LinkStatus, MissingExportFile, MissingTrack, MissingTracks, PreviewState, UnanalysedTracks, ReferenceStickSettings, RelocateReport, RowDto, ScriptRequest, Tick,
   TreeNode, ViewHandle,
   SelectionDetails, TrackDetails, TrackLookups, RelatedPlaylist,
+  PrepOptions,
+  PrepResult,
+  PrepTool,
 } from "./types";
 import { tauriInvoke } from "./invoke";
 
@@ -642,6 +645,8 @@ async function realBackend(): Promise<Backend> {
     },
     onTagListChanged: (listener) => subscribe("tag-list:changed", () => listener()),
     onEditHistory: (listener) => subscribe<EditHistoryState>("edit-history:changed", listener),
+    prep: (trackId: string, tool: PrepTool, options?: PrepOptions) =>
+      invoke<PrepResult>("prep_run", { trackId, tool, options: options ?? {} }),
     edits: {
       createPlaylist: (name, parent, index) => invoke<number>("create_playlist", { name, parent, index }),
       createSmartPlaylist: (name, parent, rule) => invoke<number>("create_smart_playlist", { name, parent, rule }),

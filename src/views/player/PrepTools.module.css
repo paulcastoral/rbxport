@@ -1,0 +1,121 @@
+/* Set-prep tools. Built from the deck's own tokens so the EDIT tab sits in
+   the pad row like GRID does, and the EDITOR panel reads as part of the deck. */
+
+.tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 78px;
+  height: var(--s-pad-edit-h);
+  padding: 0 8px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--c-deck-button);
+  color: var(--c-icon-on);
+  font-size: var(--f-size-xs);
+  font-weight: 700;
+  cursor: default;
+  white-space: nowrap;
+}
+.tool:hover:not(:disabled) { background: #383838; color: #fff; }
+.tool:disabled { background: var(--c-pad-edit-off); color: var(--c-pad-edit-off-glyph); }
+.tool[data-busy] { color: var(--c-pad-edit-on); }
+.toolLabel { line-height: 1; }
+.toolHint { font-size: 10px; font-weight: 400; color: var(--c-text-dim); line-height: 1; }
+
+.groupLabel {
+  height: var(--s-pad-section-h);
+  line-height: var(--s-pad-section-h);
+  font-size: var(--f-size-xs);
+  font-weight: 700;
+  color: var(--c-text-dim);
+}
+
+.error { color: #ff6b6b; }
+
+/* ---------------------------------------------------------- EDIT tab */
+
+.compact {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding-left: 10px;
+  overflow: hidden;
+}
+.compactGroup { display: flex; flex-direction: column; flex: none; }
+.compactButtons { display: flex; gap: 6px; }
+.compactStatus {
+  flex: 1;
+  min-width: 0;
+  padding-top: calc(var(--s-pad-section-h) + 6px);
+  font-size: var(--f-size-xs);
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------ EDITOR panel */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px 12px;
+  background: var(--c-panel);
+  border-top: 1px solid var(--c-black);
+  min-height: 0;
+}
+.header { display: flex; align-items: baseline; gap: 14px; }
+.title { font-size: var(--f-size-xs); font-weight: 700; letter-spacing: 0.08em; color: var(--c-pad-edit-on); }
+.track { font-size: var(--f-size-xs); color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.groups { display: flex; gap: 28px; flex-wrap: wrap; }
+.group { display: flex; flex-direction: column; gap: 4px; }
+.buttons { display: flex; gap: 6px; }
+.buttons .tool { height: 40px; min-width: 104px; }
+
+.options { display: flex; align-items: center; gap: 10px; }
+.option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--c-text-dim);
+}
+.option select {
+  background: var(--c-black);
+  color: var(--c-text);
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  font-size: 11px;
+  padding: 1px 2px;
+}
+.adds { font-size: 10px; color: var(--c-pad-edit-on); }
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--c-black);
+  border-radius: 2px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-size: var(--f-size-xs);
+  color: var(--c-text);
+}
+.empty { color: var(--c-text-dim); }
+.entry { display: flex; gap: 10px; padding: 2px 0; }
+.entryTool { flex: none; width: 92px; font-weight: 700; color: var(--c-text-dim); }
+.file {
+  margin-left: 8px;
+  padding: 0 5px;
+  border-radius: 2px;
+  background: #222;
+  color: #9ecbff;
+}

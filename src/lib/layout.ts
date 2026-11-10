@@ -6,14 +6,21 @@
  * and what changes is how many decks sit above it and how much of a deck each
  * of those shows.
  */
-export type PlayerLayout = "one" | "two" | "simple" | "browser";
+export type PlayerLayout = "one" | "two" | "simple" | "browser" | "editor";
 
 export const LAYOUTS: readonly { id: PlayerLayout; label: string }[] = [
   { id: "one", label: "1 PLAYER" },
   { id: "two", label: "2 PLAYER" },
   { id: "simple", label: "SIMPLE PLAYER" },
   { id: "browser", label: "FULL BROWSER" },
+  // Not rekordbox's: one full deck over the set-prep tools (tools/prep).
+  { id: "editor", label: "EDITOR" },
 ];
+
+/** Whether a layout shows the full set-prep panel under its deck. */
+export function hasEditorPanel(layout: PlayerLayout): boolean {
+  return layout === "editor";
+}
 
 /** How many decks a layout draws. */
 export function deckCount(layout: PlayerLayout): number {

@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   LayoutBrowserIcon,
+  LayoutEditorIcon,
   LayoutOneIcon,
   LayoutSimpleIcon,
   LayoutTwoIcon,
@@ -23,6 +24,7 @@ const GLYPHS: Record<PlayerLayout, typeof LayoutOneIcon> = {
   two: LayoutTwoIcon,
   simple: LayoutSimpleIcon,
   browser: LayoutBrowserIcon,
+  editor: LayoutEditorIcon,
 };
 
 export interface LayoutMenuProps {

@@ -56,9 +56,27 @@ def vocal_map(vocals: str, instrumental: str, beats: np.ndarray, margin_db: floa
     return ratio > np.percentile(ratio, 95) - margin_db
 
 
+def first_sustained(voc: np.ndarray, need: int = 3, span: int = 4) -> int:
+    """First beat where the vocal holds for `need` of `span` beats; stray blips don't count."""
+    for i in range(len(voc) - span):
+        if voc[i:i + span].sum() >= need:
+            return i
+    return len(voc)
+
+
+def last_sustained(voc: np.ndarray, need: int = 3, span: int = 4) -> int:
+    """Last beat of the final held vocal; -1 when there is none."""
+    for i in range(len(voc) - span, -1, -1):
+        if voc[i:i + span].sum() >= need:
+            return i + span - 1
+    return -1
+
+
 def auto_cues(beats: np.ndarray, beat_num: np.ndarray, voc: np.ndarray, loop_bars: int = 8) -> dict:
     """Red hot cue on the first sustained vocal; memory loop of `loop_bars` ending at its bar."""
-    first = next(i for i in range(len(beats) - 4) if voc[i:i + 4].sum() >= 3)
+    first = first_sustained(voc)
+    if first >= len(beats):
+        raise ValueError("No vocal found, so there is nothing to cue on.")
     down = np.where(beat_num == 1)[0]
     vbar = down[down <= first].max() if (down <= first).any() else down[0]
     cue = first if first - vbar > 1 else vbar  # a pickup vocal gets cued on its own beat
@@ -76,7 +94,7 @@ def extend_intro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, vo
     """Repeat a clean, vocal-free block of `bars` bars in the intro. Sample-accurate; no time lost."""
     y, sr = sf.read(src)
     P = float(np.median(np.diff(beats)))
-    first_voc = int(np.argmax(voc)) if voc.any() else len(beats)
+    first_voc = first_sustained(voc)
     down = np.where(beat_num == 1)[0]
     energy = inst_rms if inst_rms is not None else np.ones(len(beats))
     cands = []
@@ -88,12 +106,14 @@ def extend_intro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, vo
         e = energy[d:d + 4 * bars].reshape(bars, 4).mean(1)
         cands.append((int(d), float(e.mean()), float(e.std() / e.mean())))
     if not cands:
-        raise ValueError("no vocal-free block long enough in the intro")
+        raise ValueError("The vocals start too early for a clean loop: make an Instrumental first, or try fewer bars.")
     med = np.median([c[1] for c in cands])
     good = [c for c in cands if c[1] >= med and c[2] < 0.12]
     d = (good[0] if good else max(cands, key=lambda c: c[1]))[0]
     s0 = round(beats[d] * sr)
-    s1 = round((beats[d] + 4 * bars * P) * sr)
+    # The block ends on the grid's own beat, so a drifting track loops cleanly too.
+    end = beats[d + 4 * bars] if d + 4 * bars < len(beats) else beats[d] + 4 * bars * P
+    s1 = round(end * sr)
     L = s1 - s0
     out = np.concatenate([y[:s1]] + [y[s0:s1]] * repeats + [y[s1:]])
     xf = int(0.004 * sr)
@@ -104,3 +124,43 @@ def extend_intro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, vo
     sf.write(dst, out, sr, subtype="PCM_16")
     return {"looped_from_s": float(beats[d]), "bars": bars, "repeats": repeats,
             "added_s": repeats * L / sr, "shift_cues_by_s": repeats * L / sr}
+
+
+def extend_outro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, voc: np.ndarray,
+                 inst_rms: np.ndarray | None = None, bars: int = 8, repeats: int = 2) -> dict:
+    """Repeat the last clean, vocal-free block of `bars` bars before the end.
+
+    Cues before the block keep their positions.
+    """
+    y, sr = sf.read(src)
+    P = float(np.median(np.diff(beats)))
+    last_voc = last_sustained(voc)
+    down = np.where(beat_num == 1)[0]
+    energy = inst_rms if inst_rms is not None else np.ones(len(beats))
+    cands = []
+    for d in down[::-1]:
+        if d <= last_voc:
+            break
+        if d + 4 * bars > len(beats) - 4:  # leave the final beats alone
+            continue
+        e = energy[d:d + 4 * bars].reshape(bars, 4).mean(1)
+        cands.append((int(d), float(e.mean()), float(e.std() / e.mean())))
+    if not cands:
+        raise ValueError("The vocals run to the end, so there is no clean block to loop: make an Instrumental first, or try fewer bars.")
+    med = np.median([c[1] for c in cands])
+    good = [c for c in cands if c[1] >= med and c[2] < 0.12]
+    d = (good[0] if good else max(cands, key=lambda c: c[1]))[0]
+    s0 = round(beats[d] * sr)
+    # The block ends on the grid's own beat, so a drifting track loops cleanly too.
+    end = beats[d + 4 * bars] if d + 4 * bars < len(beats) else beats[d] + 4 * bars * P
+    s1 = round(end * sr)
+    L = s1 - s0
+    out = np.concatenate([y[:s1]] + [y[s0:s1]] * repeats + [y[s1:]])
+    xf = int(0.004 * sr)
+    f = np.linspace(0, 1, xf)[:, None] if y.ndim > 1 else np.linspace(0, 1, xf)
+    for k in range(repeats):
+        p = s1 + k * L
+        out[p:p + xf] = y[s1:s1 + xf] * (1 - f) + y[s0:s0 + xf] * f
+    sf.write(dst, out, sr, subtype="PCM_16")
+    return {"looped_from_s": float(beats[d]), "bars": bars, "repeats": repeats,
+            "added_s": repeats * L / sr, "shift_cues_by_s": 0.0}

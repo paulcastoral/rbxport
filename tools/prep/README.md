@@ -8,11 +8,18 @@ ported to a Rust crate.
 | --- | --- |
 | `drift` | Labels a track's grid as steady or drifting, with its tempo span and jitter |
 | `tighten` | Smooths a drifting grid onto the kicks, then auto-warps the audio to a fixed BPM (Rubber Band R3) |
-| `stems` | Splits vocals and instrumental with Demucs |
-| `cues` | Red hot cue on the first vocal, plus an 8-bar memory loop ending on the bar before it |
-| `extend` | Loops a clean, vocal-free block in the intro (default 8 bars ×2 = 16 bars added) |
+| `cues` | Finds a red hot cue on the first held vocal and an 8-bar memory loop ending on the bar before it |
+| `extend-intro` | Loops a clean, vocal-free block in the intro (default 8 bars ×2 = 16 bars added) |
+| `extend-outro` | The same at the end, after the last vocal |
+| `instrumental` / `acapella` | Demucs vocal split; stems are cached per track |
 
-Every command writes **new files** next to the input and prints JSON.
+In the app, the same tools are in the **EDIT** tab next to CUE/LOOP and GRID,
+and at full size in the **EDITOR** layout (layout menu, top left). The app
+calls `uv run --project tools/prep rbx-prep …` through the `prep_run` command;
+set `RBX_PREP_DIR` if the folder lives elsewhere.
+
+Every command writes **new files** into an `rbx-prep` folder next to the track and prints one JSON object
+(`tool`, `summary`, `files`, `details`, or `error`).
 Original audio is never modified.
 
 ## Setup (macOS)
@@ -36,7 +43,9 @@ Candido – *Jingo* (a live, drifting disco recording):
 ## Next
 
 - Read and write rbxport's own grid instead of ANLZ files.
-- Wire the commands into the track context menu and a batch "prep crate" job.
+- Apply `cues` results to the track's real hot cue and memory loop (today they are reported, not written).
+- Import the new files into the library next to the original, with grid and cues set.
+- A batch "prep this playlist" job.
 - Port `grid.py` into `crates/rbl-analysis` once the settings have been tuned.
 
 ## Licenses

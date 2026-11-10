@@ -41,6 +41,7 @@ pub mod logging;
 mod log_window;
 pub mod menu;
 pub mod player;
+mod prep;
 pub mod preview;
 mod preferences;
 mod browse_settings;
@@ -627,6 +628,7 @@ pub fn run() {
             // The GRID panel: every one rewrites the track's analysis files
             // and is refused while rekordbox runs, like the edits above.
             grid::grid_state,
+            prep::prep_run,
             grid::grid_edit,
             grid::grid_undo,
             grid::grid_redo,

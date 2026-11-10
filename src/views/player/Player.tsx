@@ -118,6 +118,7 @@ import { READ_ONLY_REASON, useMemoryCues } from "./useMemoryCues";
 import { type DeckLoopRange, useHotCues } from "./useHotCues";
 import { useCueWriter } from "./useCueWriter";
 import { CueColorMenu } from "./CueColorMenu";
+import { PrepTools } from "./PrepTools";
 import styles from "./Player.module.css";
 
 export interface PlayerProps {
@@ -2712,7 +2713,7 @@ export const Player = memo(function Player({
             the capture shows and the opposite of the usual convention.
           */}
           <div className={styles.modes} role="tablist" aria-label="Pad mode">
-            {([["cue", "CUE/LOOP"], ["grid", "GRID"]] as const).map(([id, label]) => (
+            {([["cue", "CUE/LOOP"], ["grid", "GRID"], ["edit", "EDIT"]] as const).map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -2727,7 +2728,9 @@ export const Player = memo(function Player({
             ))}
           </div>
 
-          {padMode === "grid" ? (
+          {padMode === "edit" ? (
+            <PrepTools compact trackId={playback.idle ? null : track?.id ?? null} title={track?.title} />
+          ) : padMode === "grid" ? (
             <div className={styles.gridRow}>
               <section className={styles.editGroup} aria-label="Beat grid">
                 <span className={styles.sectionLabel}>GRID EDIT</span>

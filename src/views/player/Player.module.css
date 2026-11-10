@@ -881,11 +881,14 @@
   display: flex;
   flex-direction: column;
   width: var(--s-pad-tab-w);
+  height: calc(2 * var(--s-pad-tab-h));
   flex: none;
 }
 
+/* Three tabs now (EDIT is ours), sharing the row's 48pt in thirds. */
 .mode {
-  height: var(--s-pad-tab-h);
+  flex: 1 1 0;
+  min-height: 0;
   border: 0;
   background: var(--c-black);
   color: var(--c-text);

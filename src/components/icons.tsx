@@ -240,6 +240,13 @@ export const LayoutOneIcon = (props: IconProps) => (
   </svg>
 );
 
+/** EDITOR: one deck over a tool panel, the panel's rows drawn as two strokes. */
+export const LayoutEditorIcon = (props: IconProps) => (
+  <svg viewBox="0 0 16 16" aria-hidden focusable="false" {...props}>
+    <rect x="1.5" y="2.6" width="13" height="4.4" fill="none" stroke="currentColor" strokeWidth="1.4"/><rect x="1.5" y="8.6" width="13" height="4.8" fill="none" stroke="currentColor" strokeWidth="1.4"/><path d="M3.8 10.4h5.4M3.8 12h3.2" stroke="currentColor" strokeWidth="1"/>
+  </svg>
+);
+
 export const LayoutSimpleIcon = (props: IconProps) => (
   <svg viewBox="0 0 16 16" aria-hidden focusable="false" {...props}>
     <rect x="1.5" y="5.6" width="13" height="4.8" fill="none" stroke="currentColor" strokeWidth="1.4"/>

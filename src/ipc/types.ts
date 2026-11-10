@@ -309,6 +309,13 @@ export interface Backend {
   edits: Edits;
 
   /**
+   * Runs a set-prep tool (tools/prep) on a track. Writes new files in an
+   * `rbx-prep` folder next to the track and never changes the track, its
+   * grid or its cues. Slow tools (stems) take minutes.
+   */
+  prep(trackId: string, tool: PrepTool, options?: PrepOptions): Promise<PrepResult>;
+
+  /**
    * Called when the library changes underneath us — after an edit, or when
    * Rekordbox itself writes. The argument is the new generation, which
    * invalidates every cached page.
@@ -2160,6 +2167,38 @@ export interface GridEditOptions {
 }
 
 /** What the GRID panel shows and enables. */
+/** A set-prep tool from `tools/prep` (rbx-prep). */
+export type PrepTool =
+  | "drift"
+  | "tighten"
+  | "cues"
+  | "extend-intro"
+  | "extend-outro"
+  | "instrumental"
+  | "acapella";
+
+export interface PrepOptions {
+  /** extend-intro / extend-outro: how many bars to loop. */
+  bars?: number;
+  /** extend-intro / extend-outro: how many extra times to play them. */
+  repeats?: number;
+  /** cues: length of the memory loop before the first vocal. */
+  loopBars?: number;
+  /** tighten: target BPM; nearest whole BPM when left out. */
+  bpm?: number;
+}
+
+/** What a prep tool did. New files only: the track itself is never changed. */
+export interface PrepResult {
+  tool: PrepTool;
+  /** One line for the panel. */
+  summary: string;
+  /** Absolute paths of the files it wrote. */
+  files: string[];
+  /** The tool's own numbers, for the details view. */
+  details: Record<string, unknown>;
+}
+
 export interface GridState {
   /** The grid's tempo x100, from its first beat. */
   bpmX100: number;
