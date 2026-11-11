@@ -631,6 +631,7 @@ pub fn run() {
             prep::prep_run,
             prep::prep_cancel,
             prep::prep_undo,
+            prep::prep_placements,
             grid::grid_edit,
             grid::grid_undo,
             grid::grid_redo,

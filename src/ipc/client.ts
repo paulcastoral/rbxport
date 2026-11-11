@@ -649,6 +649,7 @@ async function realBackend(): Promise<Backend> {
       invoke<PrepResult>("prep_run", { trackId, tool, options: options ?? {}, runId }),
     prepCancel: (runId: string) => invoke<void>("prep_cancel", { runId }),
     prepUndo: (files: string[]) => invoke<void>("prep_undo", { files }),
+    prepPlacements: (trackId: string) => invoke<{ playlist: string; tracks: string[] }[]>("prep_placements", { trackId }),
     edits: {
       createPlaylist: (name, parent, index) => invoke<number>("create_playlist", { name, parent, index }),
       createSmartPlaylist: (name, parent, rule) => invoke<number>("create_smart_playlist", { name, parent, rule }),

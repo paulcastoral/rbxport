@@ -7,8 +7,8 @@ import styles from "./CueColorMenu.module.css";
 
 // Rekordbox's compact 4 × 4 hot-cue picker, in its displayed order. Values
 // are ColorTableIndex entries from the desktop palette.
-const HOT = [49, 56, 60, 62, 1, 3, 9, 15, 18, 22, 26, 30, 32, 38, 41, 46] as const;
-const HOT_CSS = [
+export const HOT = [49, 56, 60, 62, 1, 3, 9, 15, 18, 22, 26, 30, 32, 38, 41, 46] as const;
+export const HOT_CSS = [
   "#DE44CF", "#B432FF", "#AA72FF", "#6473FF", "#305AFF", "#508CFF", "#00E0FF", "#19A08C",
   "#10B176", "#28E214", "#A5E116", "#B4BE04", "#C3AF04", "#E0641B", "#E02823", "#F51E8C",
 ] as const;

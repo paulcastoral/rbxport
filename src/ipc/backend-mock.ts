@@ -2118,6 +2118,7 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       return Promise.resolve();
     },
     prepUndo: () => Promise.resolve(),
+    prepPlacements: () => Promise.resolve([]),
     prep: async (trackId, tool, options = {}, runId) => {
       // Stems take minutes for real; long enough here to try Stop.
       await new Promise<void>((resolve, reject) => {

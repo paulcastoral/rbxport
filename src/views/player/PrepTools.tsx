@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getBackend } from "@/ipc/client";
 import type { PrepOptions, PrepResult, PrepTool } from "@/ipc/types";
+import { addToLibrary } from "./prepLibrary";
 import styles from "./PrepTools.module.css";
 
 interface ToolSpec {
@@ -48,6 +49,10 @@ interface Run {
   undone?: boolean;
   /** Cues AUTO CUES put on the track, which Undo deletes. */
   cueIds?: string[];
+  /** The new version's track in the library, for Show in Finder. */
+  libraryIds?: string[];
+  /** Tracks this run added to the collection, which Undo takes out again. */
+  addedIds?: string[];
 }
 
 function message(error: unknown): string {
@@ -72,7 +77,7 @@ function canUndo(entry: Run | undefined): entry is Run {
 /** A finished run in one line. */
 function describe(entry: Run): string {
   if (entry.stopped) return "Stopped. Nothing was kept from this run.";
-  if (entry.undone) return entry.cueIds?.length ? "Undone: its cues were removed." : "Undone: its files are in the Trash.";
+  if (entry.undone) return entry.cueIds?.length ? "Undone: its cues were removed." : entry.addedIds?.length ? "Undone: removed from the library, its files are in the Trash." : "Undone: its files are in the Trash.";
   return entry.result?.summary ?? "";
 }
 
@@ -160,6 +165,18 @@ export function usePrep(trackId: string | null) {
         }
         return;
       }
+      if (result.files.length > 0) {
+        // The new version goes in the library next to the original.
+        try {
+          const lib = await addToLibrary(await getBackend(), trackId, tool, result);
+          const summary = lib.note ? `${result.summary} ${lib.note}` : result.summary;
+          setRuns((was) => [{ id, tool, result: { ...result, summary }, libraryIds: lib.trackIds, addedIds: lib.added }, ...was]);
+        } catch (failure) {
+          const summary = `${result.summary} Not added to the library: ${message(failure)}`;
+          setRuns((was) => [{ id, tool, result: { ...result, summary } }, ...was]);
+        }
+        return;
+      }
       setRuns((was) => [{ id, tool, result }, ...was]);
     } catch (failure) {
       setRuns((was) => [isCancelled(failure) ? { id, tool, stopped: true } : { id, tool, error: message(failure) }, ...was]);
@@ -179,6 +196,8 @@ export function usePrep(trackId: string | null) {
     if (!entry || entry.undone || (files.length === 0 && cueIds.length === 0)) return;
     try {
       const backend = await getBackend();
+      // Out of the library first, so no row points at a file in the Trash.
+      if (entry.addedIds?.length) await backend.edits.removeFromCollection(entry.addedIds);
       if (files.length) await backend.prepUndo(files);
       for (const cue of cueIds) await backend.edits.deleteCue(cue);
       setRuns((was) => was.map((r) => (r.id === id ? { ...r, undone: true } : r)));
@@ -187,7 +206,15 @@ export function usePrep(trackId: string | null) {
     }
   }, [runs]);
 
-  return { busy, runs, run, stop, undo, error };
+  const reveal = useCallback(async (trackIdToShow: string) => {
+    try {
+      await (await getBackend()).revealTrack(trackIdToShow);
+    } catch (failure) {
+      setError(message(failure));
+    }
+  }, []);
+
+  return { busy, runs, run, stop, undo, reveal, error };
 }
 
 export interface PrepToolsProps {
@@ -198,7 +225,7 @@ export interface PrepToolsProps {
 }
 
 export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
-  const { busy, runs, run, stop, undo, error } = usePrep(trackId);
+  const { busy, runs, run, stop, undo, reveal, error } = usePrep(trackId);
   const [bars, setBars] = useState(8);
   const [repeats, setRepeats] = useState(2);
   const [loopBars, setLoopBars] = useState(8);
@@ -327,6 +354,9 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
               {entry.error ? <span className={styles.error}>{entry.error}</span> : describe(entry)}
               {entry.undone ? null : entry.result?.files.map((f) => <span key={f} className={styles.file}>{fileName(f)}</span>)}
             </span>
+            {entry.libraryIds?.[0] && !entry.undone ? (
+              <button type="button" className={styles.undo} title="Show the new file in Finder" onClick={() => { const shown = entry.libraryIds?.[0]; if (shown) void reveal(shown); }}>SHOW</button>
+            ) : null}
             {canUndo(entry) ? (
               <button type="button" className={styles.undo} title="Undo this run: its cues are removed and its files go to the Trash" onClick={() => { void undo(entry.id); }}>UNDO</button>
             ) : null}

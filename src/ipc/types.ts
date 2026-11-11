@@ -318,6 +318,8 @@ export interface Backend {
   prepCancel(runId: string): Promise<void>;
   /** Undoes a run by moving the files it wrote to the Trash. Only `rbx-prep` files. */
   prepUndo(files: string[]): Promise<void>;
+  /** The ordinary playlists holding a track, each with its tracks in order. */
+  prepPlacements(trackId: string): Promise<{ playlist: string; tracks: string[] }[]>;
 
   /**
    * Called when the library changes underneath us — after an edit, or when

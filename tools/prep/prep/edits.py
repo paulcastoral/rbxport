@@ -34,8 +34,10 @@ def autowarp(src: str, dst: str, beats: np.ndarray, bpm: float | None = None) ->
                         str(wav), str(part)], check=True, capture_output=True)
         shutil.move(str(part), dst)
     stretch = float(np.abs(np.diff(beats) / P - 1).max() * 100)
+    # Where each beat moved to: a cue anywhere in the track maps through it.
+    timemap = [[round(float(a), 4), round(float(b), 4)] for a, b in zip(beats, target)]
     return {"bpm": bpm, "first_beat_s": float(beats[0]), "max_stretch_pct": round(stretch, 2),
-            "beats": target.tolist()}
+            "beats": target.tolist(), "timemap": timemap}
 
 
 def stems(src: str, out_dir: str, model: str = "htdemucs") -> dict:
@@ -157,7 +159,7 @@ def extend_intro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, vo
         p = s1 + k * L
         out[p:p + xf] = y[s1:s1 + xf] * (1 - f) + y[s0:s0 + xf] * f
     write_atomic(dst, out, sr)
-    return {"looped_from_s": float(beats[d]), "bars": bars, "repeats": repeats,
+    return {"looped_from_s": float(beats[d]), "inserted_at_s": s1 / sr, "bars": bars, "repeats": repeats,
             "added_s": repeats * L / sr, "shift_cues_by_s": repeats * L / sr}
 
 
@@ -197,5 +199,5 @@ def extend_outro(src: str, dst: str, beats: np.ndarray, beat_num: np.ndarray, vo
         p = s1 + k * L
         out[p:p + xf] = y[s1:s1 + xf] * (1 - f) + y[s0:s0 + xf] * f
     write_atomic(dst, out, sr)
-    return {"looped_from_s": float(beats[d]), "bars": bars, "repeats": repeats,
+    return {"looped_from_s": float(beats[d]), "inserted_at_s": s1 / sr, "bars": bars, "repeats": repeats,
             "added_s": repeats * L / sr, "shift_cues_by_s": 0.0}

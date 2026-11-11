@@ -229,3 +229,42 @@ fn trash(path: &Path) -> std::io::Result<()> {
         std::fs::remove_file(path)
     }
 }
+
+/// One ordinary playlist that holds a track, with every track in it in order.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrepPlacement {
+    playlist: String,
+    tracks: Vec<String>,
+}
+
+/// Where a prep result goes: the ordinary playlists holding the original, so
+/// the new version can be added right below it. Intelligent playlists are
+/// left out, since their rule decides what they hold.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri's State extractor is injected by value")]
+pub async fn prep_placements(state: State<'_, Arc<AppState>>, track_id: String) -> AppResult<Vec<PrepPlacement>> {
+    let library = state.library()?;
+    blocking("prep_placements", move || {
+        let row = library
+            .row_of(&track_id)
+            .ok_or_else(|| AppError::new(ErrorKind::NotFound, "That track is not in the library."))?;
+        let playlists = library.playlists();
+        let out = library
+            .playlists_containing(row)
+            .into_iter()
+            .filter(|&index| !playlists.is_smart(index))
+            .filter_map(|index| {
+                let id = playlists.ids.get(index)?;
+                let members = playlists.members.get(index)?;
+                let tracks = members
+                    .iter()
+                    .filter_map(|&member| library.ids.get(member as usize).map(u64::to_string))
+                    .collect();
+                Some(PrepPlacement { playlist: id.to_string(), tracks })
+            })
+            .collect();
+        Ok(out)
+    })
+    .await
+}

@@ -68,6 +68,7 @@ import { UpdateReadyNotice } from "@/views/update/UpdateReadyNotice";
 import { MasterOutputProvider, MasterOutputConnection, useMasterControls, useMasterDisplay } from "@/store/MasterOutput";
 import { asLayout, deckCount, hasEditorPanel, isFullDeck, type PlayerLayout } from "@/lib/layout";
 import { PrepTools } from "@/views/player/PrepTools";
+import { ANALYSE_EVENT } from "@/views/player/prepLibrary";
 import { FIELD_LABEL } from "@/views/info/fieldLabel";
 import { SubBrowser } from "@/views/subbrowser/SubBrowser";
 import { RightRail } from "@/views/browser/RightRail";
@@ -2271,6 +2272,17 @@ function AppBody() {
     setAnalysisSelection(tracks.map(({ id, title }) => ({ id, title })));
   });
   const analyseSelection = useEventCallback(() => analyseTracks(selectedTracks));
+  // Prep tools' new versions: analysed with the user's settings as soon as
+  // they land, whether or not auto-analysis is on, since the tool just made
+  // them to be played.
+  useEffect(() => {
+    const onAnalyse = (event: Event) => {
+      const tracks = (event as CustomEvent<{ id: string; title: string }[]>).detail;
+      if (!readOnly && tracks.length) analysis.add(tracks);
+    };
+    window.addEventListener(ANALYSE_EVENT, onAnalyse);
+    return () => window.removeEventListener(ANALYSE_EVENT, onAnalyse);
+  }, [readOnly, analysis]);
   const reportMainSelection = useCallback((tracks: { id: string; title: string }[]) => {
     setSelectedTracks(tracks);
     setInfoSelection(tracks.map((t) => t.id));
