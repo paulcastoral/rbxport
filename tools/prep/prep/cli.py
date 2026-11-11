@@ -90,11 +90,22 @@ def run(a) -> dict:
                     "to follow. Fix the grid by hand first (BPM and bar 1 in GRID), then warp.")
             beats, followed = bent, True
         first_set = original_first
-        smooth = grid.smooth_grid(beats, y, sr)
+        # Two ways to clean up the grid before the warp: pulled onto the
+        # low-band kicks, or only smoothed. The pull helps on a jittery
+        # grid but a bass line sitting on the kick fools it (it moved The
+        # Rendition's second half 38 ms against its first). Keep whichever
+        # sits steadier on the sub-bass kicks, the same measure as above.
+        candidates = [grid.local_fit(beats), grid.smooth_grid(beats, y, sr)]
         if followed:
             # Bending only follows how the tempo changes; bar 1 stays where
             # the DJ put it.
-            smooth = smooth - (smooth[0] - first_set)
+            candidates = [c - (c[0] - first_set) for c in candidates]
+        spans = [grid.drift_span(grid.drift_curve(c, y, sr)) for c in candidates]
+        smooth = candidates[int(np.argmin(spans))]
+        if spans[int(np.argmin(spans))] > FOLLOWED_MAX_MS and followed:
+            raise ValueError(
+                f"The grid still drifts {min(spans):.0f} ms off the kicks after following them. "
+                "Fix the grid by hand first (BPM and bar 1 in GRID), then warp.")
         dst = out / f"{track.stem} (w).wav"
         r = edits.autowarp(str(track), str(dst), smooth, a.bpm)
         # The new file's grid is known exactly: every beat is where the warp
