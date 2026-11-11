@@ -29,6 +29,8 @@ pub struct PrepOptions {
     bars: Option<u32>,
     repeats: Option<u32>,
     loop_bars: Option<u32>,
+    cue_snap: Option<String>,
+    exit_bars: Option<u32>,
     bpm: Option<f64>,
 }
 
@@ -110,6 +112,10 @@ pub async fn prep_run(
         if let Some(v) = options.bars { cmd.arg("--bars").arg(v.to_string()); }
         if let Some(v) = options.repeats { cmd.arg("--repeats").arg(v.to_string()); }
         if let Some(v) = options.loop_bars { cmd.arg("--loop-bars").arg(v.to_string()); }
+        if let Some(v) = options.cue_snap.as_deref().filter(|v| ["beat", "exact", "bar"].contains(v)) {
+            cmd.arg("--cue-snap").arg(v);
+        }
+        if let Some(v) = options.exit_bars { cmd.arg("--exit-bars").arg(v.to_string()); }
         if let Some(v) = options.bpm { cmd.arg("--bpm").arg(v.to_string()); }
         cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
         #[cfg(unix)]

@@ -44,6 +44,11 @@ export function AnalysisPane(_: { tab: AnalysisTab }) {
         <p>Analyse tracks as soon as they are imported into the collection.</p>
       </div>
       <div className={styles.analysisSwitch}>
+        <Toggle label="Show settings before analyzing" checked={preferences.analysis.askSettings}
+          onChange={(askSettings) => update("analysis", { askSettings })} />
+        <p>Analyze Track opens the Analysis Setting window first. Off: it runs straight away with the settings last used there.</p>
+      </div>
+      <div className={styles.analysisSwitch}>
         <Toggle label="Add memory cue at first beat" checked={preferences.analysis.firstBeatCue}
           onChange={(firstBeatCue) => update("analysis", { firstBeatCue })} />
         <p>Adds a memory cue on the first beat of the beat grid, unless the track already has one there.</p>

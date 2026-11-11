@@ -1,4 +1,5 @@
 import type { AnalysisChoice } from "@/views/analysis/AnalysisDialog";
+import { bpmRangeLimits, type AnalysisPreferences } from "@/lib/preferences";
 
 const KEY = "rbxport.analysisChoice";
 
@@ -41,4 +42,19 @@ export function rememberAnalysisChoice(choice: AnalysisChoice): void {
   } catch {
     // Not remembering is only a convenience lost.
   }
+}
+
+/**
+ * The settings Analyze Track runs with when it skips the window: exactly
+ * what the window would have opened with, so confirming it unchanged and
+ * skipping it analyse the same way.
+ */
+export function quickAnalysisChoice(prefs: Pick<AnalysisPreferences, "mode" | "bpmRange" | "firstBeatCue" | "detectKey">): AnalysisChoice {
+  return {
+    mode: prefs.mode, bpmGrid: true, key: true, highPrecision: true,
+    ...lastAnalysisChoice(),
+    ...(prefs.detectKey ? {} : { key: false }),
+    ...bpmRangeLimits(prefs.bpmRange),
+    firstBeatCue: prefs.firstBeatCue,
+  };
 }

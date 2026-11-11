@@ -10,6 +10,7 @@
  * Every tool writes new files next to the track and leaves the track, its
  * grid and its cues alone, so nothing here asks for confirmation.
  */
+import { loadCueOptions, saveCueOptions, LOOP_CHOICES, SNAP_CHOICES, type CueOptions } from "./cueOptions";
 import { useCallback, useEffect, useState } from "react";
 
 import { getBackend } from "@/ipc/client";
@@ -89,12 +90,14 @@ const SAME_CUE_MS = 60;
 interface CuePlan {
   hot_cue?: { s: number };
   memory_loop?: { start_s: number; end_s: number; bars?: number };
+  exit_loop?: { start_s: number; end_s: number; bars?: number };
 }
 
 /**
  * Puts AUTO CUES' answer on the track: a red hot cue named "Vocal" on the
- * first held vocal, in pad A or the first free pad, and a memory loop named
- * "Mix in" over the bars before it. A cue already there at the same spot is
+ * first held vocal, in pad A or the first free pad, a memory loop named
+ * "Mix in" over the bars before it, and one named "Mix out" after the last
+ * vocal when asked for. A cue already there at the same spot is
  * left as it is, and no existing cue is moved or replaced. Resolves to the
  * ids it made and a line saying what it did.
  */
@@ -121,19 +124,22 @@ async function placeCues(trackId: string, details: Record<string, unknown>, loop
       notes.push(`red hot cue on pad ${letter}`);
     }
   }
-  if (plan.memory_loop) {
-    const inMs = Math.round(plan.memory_loop.start_s * 1000);
-    const outMs = Math.round(plan.memory_loop.end_s * 1000);
-    if (near(inMs, true)) notes.push("loop already there");
-    else {
-      // The tool shortens the loop when the vocal comes in early.
-      const bars = plan.memory_loop.bars ?? loopBars;
-      const id = await backend.edits.addLoop(trackId, "memory", inMs, outMs, bars * 4);
-      ids.push(id);
-      await backend.edits.setCueComment(id, "Mix in");
-      notes.push(`${bars}-bar memory loop`);
+  const loop = async (spot: { start_s: number; end_s: number; bars?: number }, fallback: number, name: string, what: string) => {
+    const inMs = Math.round(spot.start_s * 1000);
+    const outMs = Math.round(spot.end_s * 1000);
+    if (near(inMs, true)) {
+      notes.push(`${what} already there`);
+      return;
     }
-  }
+    // The tool shortens a loop that has no room for its full length.
+    const bars = spot.bars ?? fallback;
+    const id = await backend.edits.addLoop(trackId, "memory", inMs, outMs, bars * 4);
+    ids.push(id);
+    await backend.edits.setCueComment(id, name);
+    notes.push(`${bars}-bar ${what}`);
+  };
+  if (plan.memory_loop) await loop(plan.memory_loop, loopBars, "Mix in", "mix-in loop");
+  if (plan.exit_loop) await loop(plan.exit_loop, loopBars, "Mix out", "exit loop");
   return { ids, note: notes.length ? `Placed: ${notes.join(", ")}.` : "" };
 }
 
@@ -157,7 +163,7 @@ export function usePrep(trackId: string | null) {
         // The tool only finds the spots; the cues themselves go on the
         // track here, through the same edits the CUE panel uses.
         try {
-          const placed = await placeCues(trackId, result.details, options?.loopBars ?? 8);
+          const placed = await placeCues(trackId, result.details, options?.loopBars ?? 4);
           const summary = placed.note ? `${result.summary} ${placed.note}` : result.summary;
           setRuns((was) => [{ id, tool, result: { ...result, summary }, cueIds: placed.ids }, ...was]);
         } catch (failure) {
@@ -228,9 +234,18 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
   const { busy, runs, run, stop, undo, reveal, error } = usePrep(trackId);
   const [bars, setBars] = useState(8);
   const [repeats, setRepeats] = useState(2);
-  const [loopBars, setLoopBars] = useState(8);
+  const [cueOptions, setCueOptions] = useState<CueOptions>(loadCueOptions);
+  const setCue = (change: Partial<CueOptions>) => {
+    setCueOptions((was) => {
+      const next = { ...was, ...change };
+      saveCueOptions(next);
+      return next;
+    });
+  };
+  // The EDIT tab has no room for these, so it uses what was last set here.
   const options = (tool: PrepTool): PrepOptions =>
-    tool === "extend-intro" || tool === "extend-outro" ? { bars, repeats } : tool === "cues" ? { loopBars } : {};
+    tool === "extend-intro" || tool === "extend-outro" ? { bars, repeats }
+      : tool === "cues" ? (compact ? loadCueOptions() : cueOptions) : {};
   const disabled = trackId === null || busy !== null;
   const latest = runs[0];
 
@@ -317,12 +332,26 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
             <span className={styles.groupTitle}>{group}</span>
             <div className={styles.keys}>{PREP_TOOLS.filter((t) => t.group === group).map(key)}</div>
             {group === "CUES" ? (
-              <label className={styles.option}>
-                LOOP BARS
-                <select value={loopBars} onChange={(e) => setLoopBars(Number(e.target.value))}>
-                  {[4, 8, 16].map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </label>
+              <div className={styles.options}>
+                <label className={styles.option} title="Memory loop over the bars before the vocal">
+                  MIX IN
+                  <select value={cueOptions.loopBars} onChange={(e) => setCue({ loopBars: Number(e.target.value) })}>
+                    {LOOP_CHOICES.map((n) => <option key={n} value={n}>{n === 0 ? "OFF" : n}</option>)}
+                  </select>
+                </label>
+                <label className={styles.option} title="Red cue on the beat nearest the vocal, on the exact spot it comes in, or on its bar">
+                  VOCAL
+                  <select value={cueOptions.cueSnap} onChange={(e) => setCue({ cueSnap: SNAP_CHOICES.find((c) => c === e.target.value) ?? "beat" })}>
+                    {SNAP_CHOICES.map((c) => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+                  </select>
+                </label>
+                <label className={styles.option} title="Memory loop after the last vocal, to mix out on">
+                  EXIT
+                  <select value={cueOptions.exitBars} onChange={(e) => setCue({ exitBars: Number(e.target.value) })}>
+                    {LOOP_CHOICES.map((n) => <option key={n} value={n}>{n === 0 ? "OFF" : n}</option>)}
+                  </select>
+                </label>
+              </div>
             ) : null}
             {group === "EDIT" ? (
               <div className={styles.options}>

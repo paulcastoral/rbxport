@@ -8,7 +8,7 @@ ported to a Rust crate.
 | --- | --- |
 | `drift` | Labels a track's grid as steady or drifting, with its tempo span and jitter |
 | `warp` (also `tighten`) | Auto-warps the audio to a fixed BPM (Rubber Band R3). If the grid drifts off the kicks (a track whose tempo wanders under a straight grid), it first bends the grid to follow them, keeping bar 1 where you set it; a drift it can't follow is refused |
-| `cues` | Finds a red hot cue on the first held vocal and an 8-bar memory loop ending on the bar before it |
+| `cues` | Red hot cue on the beat just before the first held vocal comes in (`--cue-snap beat\|exact\|bar`), a mix-in memory loop ending on the vocal's bar (`--loop-bars`, default 4, 0 = none) and an optional exit loop after the last vocal (`--exit-bars`) |
 | `extend-intro` | Loops a clean, vocal-free block in the intro (default 8 bars ×2 = 16 bars added) |
 | `extend-outro` | The same at the end, after the last vocal |
 | `instrumental` / `acapella` | Demucs vocal split; stems are cached per track |

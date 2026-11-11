@@ -202,6 +202,12 @@ export interface AnalysisPreferences {
   /** The tempo range automatic analysis searches; also the Analysis Setting default. */
   bpmRange: BpmRange;
   /**
+   * Analyze Track opens the Analysis Setting window first. Off (the
+   * default) runs straight away with what that window was last confirmed
+   * with, on top of these preferences.
+   */
+  askSettings: boolean;
+  /**
    * Key Analysis > "Write the value to the ID3 tag": a key analysis finds,
    * or an edited key, also goes into the track's audio file (MP3 and AIFF
    * `TKEY`, FLAC `INITIALKEY`), as rekordbox's `writeKeyInTag` does. Off by
@@ -405,6 +411,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
     auto: false,
     firstBeatCue: false,
     bpmRange: "70-180",
+    askSettings: false,
     writeKeyTag: false,
     detectKey: true,
   },
@@ -588,6 +595,7 @@ export function sanitisePreferences(value: unknown): Preferences {
       auto: bool(analysis.auto, d.analysis.auto),
       firstBeatCue: bool(analysis.firstBeatCue, d.analysis.firstBeatCue),
       bpmRange: oneOf(analysis.bpmRange, BPM_RANGES, d.analysis.bpmRange),
+      askSettings: bool(analysis.askSettings, d.analysis.askSettings),
       writeKeyTag: bool(analysis.writeKeyTag, d.analysis.writeKeyTag),
       detectKey: bool(analysis.detectKey, d.analysis.detectKey),
     },

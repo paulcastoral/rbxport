@@ -69,6 +69,7 @@ import { MasterOutputProvider, MasterOutputConnection, useMasterControls, useMas
 import { asLayout, deckCount, hasEditorPanel, isFullDeck, type PlayerLayout } from "@/lib/layout";
 import { PrepTools } from "@/views/player/PrepTools";
 import { ANALYSE_EVENT } from "@/views/player/prepLibrary";
+import { quickAnalysisChoice } from "@/lib/analysisChoice";
 import { FIELD_LABEL } from "@/views/info/fieldLabel";
 import { SubBrowser } from "@/views/subbrowser/SubBrowser";
 import { RightRail } from "@/views/browser/RightRail";
@@ -2272,7 +2273,9 @@ function AppBody() {
       refuseAnalysis();
       return;
     }
-    setAnalysisSelection(tracks.map(({ id, title }) => ({ id, title })));
+    const items = tracks.map(({ id, title }) => ({ id, title }));
+    if (analysisPrefs.askSettings) setAnalysisSelection(items);
+    else analysis.add(items, quickAnalysisChoice(analysisPrefs));
   });
   const analyseSelection = useEventCallback(() => analyseTracks(selectedTracks));
   // Prep tools' new versions: analysed with the user's settings as soon as
@@ -2300,9 +2303,10 @@ function AppBody() {
         refuseAnalysis();
         return;
       }
-      setAnalysisSelection([{ id, title }]);
+      if (analysisPrefs.askSettings) setAnalysisSelection([{ id, title }]);
+      else analysis.add([{ id, title }], quickAnalysisChoice(analysisPrefs));
     },
-    [readOnly, refuseAnalysis],
+    [readOnly, refuseAnalysis, analysisPrefs, analysis],
   );
   // Once, at launch, with Auto Analysis on: rekordbox asks "Auto Analysis is
   // starting." before it analyses the Collection tracks it never analysed.

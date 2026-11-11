@@ -2197,8 +2197,12 @@ export interface PrepOptions {
   bars?: number;
   /** extend-intro / extend-outro: how many extra times to play them. */
   repeats?: number;
-  /** cues: length of the memory loop before the first vocal. */
+  /** cues: length of the mix-in memory loop before the first vocal; 0 for none. */
   loopBars?: number;
+  /** cues: the red cue on the beat nearest the vocal, on its exact start, or on its bar. */
+  cueSnap?: "beat" | "exact" | "bar";
+  /** cues: length of the exit memory loop after the last vocal; 0 for none. */
+  exitBars?: number;
   /** tighten: target BPM; nearest whole BPM when left out. */
   bpm?: number;
 }

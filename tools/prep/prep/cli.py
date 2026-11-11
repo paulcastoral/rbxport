@@ -137,15 +137,25 @@ def run(a) -> dict:
     voc = edits.vocal_map(s["vocals"], s["instrumental"], beats)
 
     if tool == "cues":
-        r = edits.auto_cues(beats, nums, voc, a.loop_bars)
+        window = edits.first_sustained(voc, need=6, span=8)
+        onset = None
+        if window < len(beats):
+            first = window + int(np.argmax(voc[window:window + 8]))
+            onset = edits.vocal_onset(s["vocals"], beats, first)
+        r = edits.auto_cues(beats, nums, voc, a.loop_bars, onset, a.cue_snap, a.exit_bars)
+        parts = [f"Vocal comes in at {_fmt(r['vocal_onset_s'])}; red cue at {_fmt(r['hot_cue']['s'])}."]
         loop = r.get("memory_loop")
         if loop:
-            extra = (f"{loop['bars']}-bar loop {_fmt(loop['start_s'])}–{_fmt(loop['end_s'])}"
-                     + (" (only room for 4 bars before the vocal)" if loop["bars"] < a.loop_bars else "") + ".")
-        else:
-            extra = "No loop: the vocal starts too early for one."
-        return {"tool": tool, "files": [], "details": r,
-                "summary": f"First vocal at {_fmt(r['hot_cue']['s'])}; {extra}"}
+            parts.append(f"{loop['bars']}-bar mix-in loop {_fmt(loop['start_s'])}–{_fmt(loop['end_s'])}"
+                         + (f" (only room for {loop['bars']} before the vocal)" if loop["bars"] < a.loop_bars else "") + ".")
+        elif a.loop_bars:
+            parts.append("No mix-in loop: the vocal starts too early for one.")
+        ex = r.get("exit_loop")
+        if ex:
+            parts.append(f"{ex['bars']}-bar exit loop {_fmt(ex['start_s'])}–{_fmt(ex['end_s'])}.")
+        elif a.exit_bars:
+            parts.append("No exit loop: no room for one at the end.")
+        return {"tool": tool, "files": [], "details": r, "summary": " ".join(parts)}
 
     edges = np.append(beats, beats[-1] + np.median(np.diff(beats)))
     inst = edits._beat_rms(s["instrumental"], edges)
@@ -171,7 +181,10 @@ def main(argv=None) -> None:
     p.add_argument("--bpm", type=float, help="tighten: target BPM (default: nearest whole BPM)")
     p.add_argument("--bars", type=int, default=8)
     p.add_argument("--repeats", type=int, default=2)
-    p.add_argument("--loop-bars", type=int, default=8)
+    p.add_argument("--loop-bars", type=int, default=4, help="cues: mix-in loop length in bars (0 = none)")
+    p.add_argument("--cue-snap", choices=["beat", "exact", "bar"], default="beat",
+                   help="cues: red cue on the nearest beat, the vocal's exact start, or its bar")
+    p.add_argument("--exit-bars", type=int, default=0, help="cues: exit loop length in bars (0 = none)")
     p.add_argument("--out", help="where new files go (default: an rbx-prep folder next to the track)")
     a = p.parse_args(argv)
     try:
