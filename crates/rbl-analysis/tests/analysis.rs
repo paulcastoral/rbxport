@@ -795,8 +795,10 @@ fn a_trimmed_opening_beat_is_shorter_without_moving_later_beats() {
                 * (2.0 * std::f64::consts::PI * 80.0 * j as f64 / 48_000.0).sin()) as f32;
         }
     }
-    // Include a zero crossing and the last sample strictly below 20 ms.
-    for trimmed_samples in [48, 240, 300, 480, 720, 912, 959, 960, 1008, 1440] {
+    // GridBin grids a clipped first beat up to a quarter of a beat in
+    // (rekordbox stops at 20 ms): 468.75 ms beats here, so up to 117 ms. The
+    // tick is 100 ms long, so a trim past it leaves no audio at the start.
+    for trimmed_samples in [48, 240, 300, 480, 720, 912, 959, 960, 1008, 1440, 2400, 3600, 6000] {
         let trimmed_ms = trimmed_samples as f64 / 48.0;
         let samples = &audio[trimmed_samples..];
         let options = rbl_analysis::AnalysisPreset::Rbxport.options();
@@ -805,7 +807,7 @@ fn a_trimmed_opening_beat_is_shorter_without_moving_later_beats() {
         let attacks = rbl_analysis::attack::AttackMap::new(samples, 48_000, options.attacks);
         let fitted = rbl_analysis::tempo::detect_tempo_with(&onsets, Some(&kicks), Some(&attacks), options.tempo);
         let result = rbl_analysis::analyse_with(samples, 48_000, options).tempo;
-        if trimmed_samples >= 960 {
+        if trimmed_samples >= 4_800 {
             assert!(result.beats[0].time_ms > 0, "trim {trimmed_ms} ms must not qualify");
             assert_eq!(result.beats.len(), fitted.beats.len());
             for (after, before) in result.beats.iter().zip(&fitted.beats) {

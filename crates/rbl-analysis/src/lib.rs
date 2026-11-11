@@ -243,8 +243,15 @@ fn level(samples: &[f32]) -> (f32, f32) {
     (peak, rms)
 }
 
+/// How much of the opening beat a file may have cut off and still have that
+/// beat gridded at zero, as a share of the beat. rekordbox stops at 20 ms,
+/// and rbxport matched it; GridBin grids the first kick of an edit whose cut
+/// lands up to a quarter of a beat into it (125 ms at 120 BPM), since a DJ
+/// edit or a rip often starts a little inside its first kick.
+const MAX_OPENING_CUT: f64 = 0.25;
+
 /// Restore a boundary beat lost when the fit falls just before zero. Only
-/// correct a grid near zero (including an opening cut shorter than 20 ms), with
+/// correct a grid near zero (including an opening cut of under a quarter beat), with
 /// audio starting in the first millisecond. A later onset or silent intro
 /// must not become beat 1.1 at zero. This uses full-band audio, not a
 /// particular instrument or the kick detector's frequency band.
@@ -264,7 +271,7 @@ fn anchor_file_start(tempo: &mut TempoResult, samples: &[f32], sample_rate: u32,
     }
     let phase = first.phase_secs.rem_euclid(first.period_secs);
     let clipped = cut > 0.5 / f64::from(sample_rate);
-    if (clipped && cut >= 0.020 - 0.5 / f64::from(sample_rate))
+    if (clipped && cut >= MAX_OPENING_CUT * first.period_secs)
         || (!clipped && phase.min(first.period_secs - phase) > reach)
     {
         return;
@@ -309,7 +316,7 @@ fn anchor_file_start(tempo: &mut TempoResult, samples: &[f32], sample_rate: u32,
 fn opening_cut_secs(first: &tempo::Segment, samples: &[f32], sample_rate: u32) -> f64 {
     let next = first.start_secs();
     let inferred = first.period_secs - next;
-    if inferred <= 0.0 || inferred > 0.035 {
+    if inferred <= 0.0 || inferred > MAX_OPENING_CUT * first.period_secs {
         return 0.0;
     }
     let rate = f64::from(sample_rate);

@@ -42,7 +42,7 @@ flowchart TD
         S10 --> S11[12. Mark the phrase starts:<br/>the strongest changes on downbeats]
     end
 
-    S11 --> Q0{12a. Boundary beat or opening cut under 20 ms,<br/>audio at the start,<br/>and compatible downbeat?}
+    S11 --> Q0{12a. Boundary beat or opening cut under a quarter beat,<br/>audio at the start,<br/>and compatible downbeat?}
     Q0 -- yes --> QC{Opening beat cut short?}
     QC -- yes --> ZC[Add beat 1.1 at zero;<br/>keep every later beat in place]
     QC -- no --> Z0[Anchor first segment at zero;<br/>regenerate beats starting with 1.1]
@@ -108,7 +108,9 @@ first frame centre rather than at sample zero. The gate checks:
 
 - The first segment begins within 15 ms of the file start. Its grid either
   has a boundary beat within 15 ms of zero or an opening beat cut short by
-  strictly less than 20 ms. A cut of 20 ms or more does not qualify.
+  less than a quarter of a beat (117 ms at 128 BPM). rekordbox stops at
+  20 ms, and rbxport matched it; GridBin grids the first kick of an edit or
+  rip whose cut lands inside it.
 - Downbeat selection either chose the first emitted beat (which may be
   the fallback after dropping the boundary beat), or places the inferred
   opening beat on its downbeat cycle, accounting for the cut. A distinct later musical downbeat prevents adjustment.
@@ -123,7 +125,7 @@ silence, it refines the onset to sample precision using full-band audio;
 this avoids counting the RMS detector's roughly 1 ms early placement as
 part of the cut. With continuous audio it uses the fitted estimate.
 
-When the opening beat is cut by less than 20 ms, only that beat is placed
+When the opening beat is cut by less than a quarter beat, only that beat is placed
 at `0:00.00`. Every subsequent beat keeps its existing timestamp and BPM.
 The first interval is therefore shorter than a full beat. A one-beat
 opening segment represents this boundary exception, followed by the
