@@ -22,7 +22,7 @@ import numpy as np
 
 from . import edits, grid
 
-TOOLS = ["drift", "tighten", "cues", "extend-intro", "extend-outro", "instrumental", "acapella",
+TOOLS = ["drift", "tighten", "warp", "cues", "extend-intro", "extend-outro", "instrumental", "acapella",
          # older names, kept so earlier notes still work
          "stems", "extend"]
 
@@ -43,7 +43,7 @@ def run(a) -> dict:
     track = Path(a.track)
     out = Path(a.out) if a.out else track.parent / "rbx-prep"
     out.mkdir(parents=True, exist_ok=True)
-    tool = {"stems": "instrumental", "extend": "extend-intro"}.get(a.command, a.command)
+    tool = {"stems": "instrumental", "extend": "extend-intro", "warp": "tighten"}.get(a.command, a.command)
 
     def need_grid():
         if not a.anlz:
@@ -55,7 +55,7 @@ def run(a) -> dict:
         r = grid.drift_report(beats)
         summary = (f"Steady at {r['median_bpm']} BPM." if r["kind"] == "steady" else
                    f"Drifting: tempo wanders {r['tempo_span_bpm']} BPM, grid jitter {r['jitter_ms']} ms. "
-                   "Tighten it for a fixed grid.")
+                   "Warp it for a fixed grid.")
         return {"tool": tool, "summary": summary, "files": [], "details": r}
 
     if tool == "tighten":
@@ -63,7 +63,7 @@ def run(a) -> dict:
         beats, _ = need_grid()
         y, sr = librosa.load(str(track), sr=None, mono=True)
         smooth = grid.smooth_grid(beats, y, sr)
-        dst = out / f"{track.stem} (tight).wav"
+        dst = out / f"{track.stem} (w).wav"
         r = edits.autowarp(str(track), str(dst), smooth, a.bpm)
         r.pop("beats")
         return {"tool": tool, "files": [str(dst)], "details": r,

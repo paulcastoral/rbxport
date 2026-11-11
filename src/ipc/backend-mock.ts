@@ -2129,8 +2129,8 @@ export function createMockBackend(options: MockOptions = {}): Backend {
       const repeats = options.repeats ?? 2;
       const file = (suffix: string) => `/Users/mock/Music/rbx-prep/Track ${trackId} (${suffix}).wav`;
       const results: Record<string, PrepResult> = {
-        drift: { tool: "drift", summary: "Drifting: tempo wanders 2.14 BPM, grid jitter 7.8 ms. Tighten it for a fixed grid.", files: [], details: { kind: "drifting", median_bpm: 120, tempo_span_bpm: 2.14, jitter_ms: 7.8 } },
-        tighten: { tool: "tighten", summary: `Warped to a steady ${options.bpm ?? 121} BPM (at most 1.05% stretch).`, files: [file("tight")], details: { bpm: options.bpm ?? 121, max_stretch_pct: 1.05 } },
+        drift: { tool: "drift", summary: "Drifting: tempo wanders 2.14 BPM, grid jitter 7.8 ms. Warp it for a fixed grid.", files: [], details: { kind: "drifting", median_bpm: 120, tempo_span_bpm: 2.14, jitter_ms: 7.8 } },
+        tighten: { tool: "tighten", summary: `Warped to a steady ${options.bpm ?? 121} BPM (at most 1.05% stretch).`, files: [file("w")], details: { bpm: options.bpm ?? 121, max_stretch_pct: 1.05 } },
         cues: { tool: "cues", summary: `First vocal at 1:35.8; ${options.loopBars ?? 8}-bar loop 1:18.4–1:34.3.`, files: [], details: { hot_cue: { slot: "A", color: "red", s: 95.8 }, memory_loop: { start_s: 78.444, end_s: 94.312 } } },
         "extend-intro": { tool: "extend-intro", summary: `Added ${bars * repeats} bars to the intro, looping the ${bars} bars from 0:30.8.`, files: [file("Extended Intro")], details: {} },
         "extend-outro": { tool: "extend-outro", summary: `Added ${bars * repeats} bars to the outro, looping the ${bars} bars from 5:12.0.`, files: [file("Extended Outro")], details: {} },

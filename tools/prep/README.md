@@ -7,7 +7,7 @@ ported to a Rust crate.
 | Command | What it does |
 | --- | --- |
 | `drift` | Labels a track's grid as steady or drifting, with its tempo span and jitter |
-| `tighten` | Smooths a drifting grid onto the kicks, then auto-warps the audio to a fixed BPM (Rubber Band R3) |
+| `warp` (also `tighten`) | Smooths a drifting grid onto the kicks, then auto-warps the audio to a fixed BPM (Rubber Band R3) |
 | `cues` | Finds a red hot cue on the first held vocal and an 8-bar memory loop ending on the bar before it |
 | `extend-intro` | Loops a clean, vocal-free block in the intro (default 8 bars ×2 = 16 bars added) |
 | `extend-outro` | The same at the end, after the last vocal |

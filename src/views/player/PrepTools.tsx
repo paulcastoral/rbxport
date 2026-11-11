@@ -28,7 +28,7 @@ interface ToolSpec {
 
 export const PREP_TOOLS: readonly ToolSpec[] = [
   { id: "drift", label: "CHECK DRIFT", hint: "Steady or drifting", group: "GRID" },
-  { id: "tighten", label: "TIGHTEN", hint: "Warp to fixed BPM", group: "GRID" },
+  { id: "tighten", label: "WARP", hint: "Lock to a fixed BPM", group: "GRID" },
   { id: "cues", label: "AUTO CUES", hint: "Loop + red cue", group: "CUES", slow: true },
   { id: "extend-intro", label: "EXT INTRO", hint: "Loop intro bars", group: "EDIT", slow: true },
   { id: "extend-outro", label: "EXT OUTRO", hint: "Loop outro bars", group: "EDIT", slow: true },

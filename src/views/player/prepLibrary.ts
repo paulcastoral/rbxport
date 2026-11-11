@@ -14,7 +14,8 @@ import { HOT, HOT_CSS } from "./CueColorMenu";
 
 /** What each tool's version is called, after the original title. */
 export const VERSION_NAME: Partial<Record<PrepTool, string>> = {
-  tighten: "Tight",
+  // A warped version is marked short, the way DJs tag edits: "Jingo (w)".
+  tighten: "w",
   "extend-intro": "Extended Intro",
   "extend-outro": "Extended Outro",
   instrumental: "Instrumental",
