@@ -237,6 +237,9 @@ export function detailWaveWindow(
   };
 }
 
+/** How loud, of 255, a waveform column must be to count as the first hit. */
+const MIN_ATTACK_LEVEL = 16;
+
 /**
  * Clock correction for an analysis waveform whose first attack includes an
  * encoder's leading samples while the beat grid and decoder do not.
@@ -262,6 +265,12 @@ export function detailWaveOriginMs(
     }
   }
   if (first <= 0) return 0;
+  // The first sound has to be a hit, not a quiet fade-in. A track that rises
+  // out of silence draws a column or two at 1 or 2 before its first beat;
+  // taking that for an encoder's lead-in moved the whole waveform up to 50 ms
+  // late against a grid that was right (Eddie C, "Now More Than Ever": 36.7 ms).
+  const hit = Math.max(...bytes.subarray(first * stride, Math.min(columns, first + 2) * stride));
+  if (hit < MIN_ATTACK_LEVEL) return 0;
   const attackMs = (first + 0.5) / DETAIL_WAVE_COLUMNS_PER_SECOND * 1000;
   const correction = attackMs - firstBeatMs;
   return correction > 0 && correction <= 50 ? correction : 0;

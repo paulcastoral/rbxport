@@ -815,6 +815,15 @@ describe("detailWaveOriginMs", () => {
   it("does not align a waveform that already has audio at its origin", () => {
     expect(detailWaveOriginMs(25, new Uint8Array([1, 2, 3, 0, 0, 0]), 3)).toBe(0);
   });
+
+  it("does not take a quiet fade-in for an encoder's lead-in", () => {
+    // Eddie C, "Now More Than Ever": silence, then 1s and 2s from column 11
+    // as the track fades in, its first kick half a second later. Shifting the
+    // waveform by that "attack" drew every kick 36.7 ms behind its grid line.
+    const bytes = new Uint8Array(16 * 3);
+    for (let column = 11; column < 16; column += 1) bytes.set([1, 1, 0], column * 3);
+    expect(detailWaveOriginMs(40, bytes, 3)).toBe(0);
+  });
 });
 
 describe("subdivideGrid", () => {
