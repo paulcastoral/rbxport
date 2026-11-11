@@ -418,7 +418,7 @@ const EditableCell = memo(function EditableCell({
 
 const TrackRow = memo(function TrackRow({
   row, top, selected, played, onSelect, onOpen, onDragStart, onDragEnd, index, columns, onRate,
-  onComment, onEditField, onEditColor, onEditBlocked, onMenu, keyDisplay, keyChoices, onOpenKeys, previewCues, clickToEdit, tooltips, trafficKey, trafficReach,
+  onComment, onEditField, onEditColor, onEditBlocked, onMenu, keyDisplay, keyChoices, onOpenKeys, previewCues, clickToEdit: _clickToEdit, tooltips, trafficKey, trafficReach,
   reorderable, isLocalDrag, dropEdge, onReorderOver, onReorderDrop, startupCache, previewHeight,
 }: {
   row: RowDto | undefined;
@@ -683,14 +683,9 @@ const TrackRow = memo(function TrackRow({
               onCommit={(next) => onComment(row.id, next)}
               // A click edits only a selected row's comment; on any other
               // row the click is a selection, as it has to be.
-              onClick={clickToEdit && selected}
-              tip={
-                tooltips
-                  ? clickToEdit
-                    ? "Comment — click to edit"
-                    : "Comment — double-click to edit"
-                  : undefined
-              }
+              onClick={selected}
+              doubleClickLoads
+              tip={tooltips ? "Comment — click to edit" : undefined}
             />
           );
         }
@@ -713,13 +708,12 @@ const TrackRow = memo(function TrackRow({
                 label={col.label}
                 col={col.key}
                 onCommit={(next) => onEditField(row.id, field, next)}
-                onClick={(clickToEdit || col.key === "title") && selected}
-                doubleClickLoads={col.key === "title"}
-                tip={
-                  tooltips
-                    ? `${col.label} — ${clickToEdit || col.key === "title" ? "click" : "double-click"} to edit`
-                    : undefined
-                }
+                // GridBin: a double click anywhere on a row loads the track, as
+                // on the title; a field is edited by clicking it on a row that
+                // is already selected.
+                onClick={selected}
+                doubleClickLoads
+                tip={tooltips ? `${col.label} — click to edit` : undefined}
               />
             );
           }
@@ -768,7 +762,8 @@ const TrackRow = memo(function TrackRow({
                 choices={["0", ...COLORS.map((color) => color.id)]}
                 choiceLabel={(color) => t(color === "0" ? "No Color" : COLORS.find((entry) => entry.id === color)?.name ?? "")}
                 onCommit={(color) => onEditColor(row.id, color)}
-                onClick={clickToEdit && selected}
+                onClick={selected}
+                doubleClickLoads
                 onEditBlocked={onEditBlocked}
                 tip={undefined}
               />
