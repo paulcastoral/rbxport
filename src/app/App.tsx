@@ -130,6 +130,7 @@ const Preferences = lazy(() => import("@/views/settings/Preferences").then(m => 
 const SyncManager = lazy(() => import("@/views/sync/SyncManager").then(m => ({ default: m.SyncManager })));
 const SmartPlaylistEditor = lazy(() => import("@/views/tree/SmartPlaylistEditor").then(m => ({ default: m.SmartPlaylistEditor })));
 const MissingFileManager = lazy(() => import("@/views/library/MissingFileManager").then(m => ({ default: m.MissingFileManager })));
+const LibraryCleanup = lazy(() => import("@/views/library/LibraryCleanup").then(m => ({ default: m.LibraryCleanup })));
 
 const SHOW_MAIN_SUPPORT = true;
 
@@ -234,6 +235,8 @@ function AppBody() {
   const [missingLibrary, setMissingLibrary] = useState<LibraryQuestion | null>(null);
   /** File › Display All Missing Files: the Missing File Manager is open. */
   const [missingFilesOpen, setMissingFilesOpen] = useState(false);
+  // GridBin: File › Library Cleanup… (missing files and duplicates).
+  const [cleanupOpen, setCleanupOpen] = useState(false);
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
   // Do not write the empty bootstrap selection over the session while the
   // backend is still restoring the node that was open at exit. WebKit gets
@@ -2480,6 +2483,10 @@ function AppBody() {
       setMissingFilesOpen(true);
       return;
     }
+    if (outcome.action === "library-cleanup") {
+      setCleanupOpen(true);
+      return;
+    }
     openPreferences("view");
   }, [
     readOnly, advancedPrefs.protectLibrary, importFromMenu, importFolderFromMenu, importXmlFromMenu, exportXmlFromMenu, refuse,
@@ -3661,6 +3668,15 @@ function AppBody() {
           onUseDefault={async () => (await getBackend()).useDefaultLibrary()}
           onConfirm={async (message, labels) => (await getBackend()).confirm(message, labels)}
           onQuit={() => { void getBackend().then(backend => backend.closeWindow()); }} />
+      ) : null}
+      {cleanupOpen ? (
+        <LibraryCleanup
+          readOnly={readOnly}
+          onRelocate={() => { setCleanupOpen(false); setMissingFilesOpen(true); }}
+          onWrote={(said) => { void afterWrite(said); }}
+          onFailed={refuse}
+          onClose={() => setCleanupOpen(false)}
+        />
       ) : null}
       {missingFilesOpen ? (
         <MissingFileManager

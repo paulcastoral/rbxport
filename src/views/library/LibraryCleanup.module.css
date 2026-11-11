@@ -1,0 +1,121 @@
+/* GridBin's Library Cleanup: one window, two sections, in the theme's
+   panel style (outlined sections, caps labels), using the shared tokens so
+   it follows the classic look too. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--c-modal-scrim, rgb(0 0 0 / 55%));
+}
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(860px, 94vw);
+  height: min(680px, 90vh);
+  padding: 12px 16px 12px;
+  background: var(--c-panel);
+  border: 1px solid var(--c-menu-border, #444);
+  color: var(--c-text);
+  font-size: var(--f-size-ui);
+  box-sizing: border-box;
+}
+.header { display: flex; align-items: center; }
+.title {
+  flex: 1;
+  font-family: var(--f-label, var(--f-ui));
+  font-weight: 700;
+  font-style: italic;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: var(--c-accent);
+}
+.close {
+  border: 0;
+  background: none;
+  color: var(--c-text-dim);
+  font-size: 16px;
+  cursor: default;
+}
+.close:hover { color: var(--c-text); }
+
+.section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 12px 10px;
+  border: 1.5px solid var(--c-accent);
+  border-radius: 5px;
+  min-height: 0;
+}
+.grow { flex: 1; }
+.sectionTitle {
+  position: absolute;
+  top: -0.7em;
+  left: 12px;
+  padding: 0 6px;
+  background: var(--c-panel);
+  color: var(--c-accent);
+  font-family: var(--f-label, var(--f-ui));
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+.row { display: flex; align-items: center; gap: 10px; }
+.summary { flex: 1; color: var(--c-text); }
+
+.button {
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--c-button);
+  color: var(--c-text);
+  font-family: var(--f-label, var(--f-ui));
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: default;
+  white-space: nowrap;
+}
+.button:hover:not(:disabled) { background: var(--c-raised); }
+.button:disabled { opacity: 0.45; }
+.danger { background: var(--m-red, #8a1f1f); color: #fff; }
+.danger:hover:not(:disabled) { background: var(--m-led, #a82626); }
+
+.groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+.group { padding: 8px 0; border-top: 1px solid var(--c-black); }
+.groupName { font-weight: 600; margin-bottom: 4px; }
+.copy {
+  display: grid;
+  grid-template-columns: auto 64px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 3px 6px;
+  border-radius: 2px;
+  color: var(--c-text-dim);
+}
+.copy[data-keep] { background: var(--c-select); color: var(--c-text); }
+.copy[data-missing] .meta { color: var(--c-error, #ff6b6b); }
+.badge {
+  font-family: var(--f-label, var(--f-ui));
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+.copy[data-keep] .badge { color: var(--c-accent); }
+.path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta { white-space: nowrap; font-size: 11.5px; }
+.reason { grid-column: 3 / -1; font-size: 11px; color: var(--c-accent); }
+
+.footer { font-size: 11px; color: var(--c-text-dim); }

@@ -16,6 +16,7 @@ export type MenuAction =
   | "import-itunes"
   | "export-xml"
   | "missing"
+  | "library-cleanup"
   | "info"
   | "analyze-track"
   | "locate-loaded"
@@ -47,6 +48,8 @@ const COMMANDS: Record<string, MenuCommand> = {
   // Listing missing files reads; the manager's own buttons are what write,
   // and they are greyed while the library is read-only.
   missing: { action: "missing", writes: false },
+  // GridBin: missing files and duplicates in one window; its buttons write.
+  "library-cleanup": { action: "library-cleanup", writes: false },
   info: { action: "info", writes: false },
   // Track › Analyze Track, rekordbox's 4000: the selected tracks go to the
   // analyser. It writes, but the command refuses a read-only library itself,

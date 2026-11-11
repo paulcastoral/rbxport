@@ -123,6 +123,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     build_with_labels(app, &Labels::new())
 }
 
+#[allow(clippy::too_many_lines, reason = "one builder per menu item, in menu order")]
 fn build_with_labels<R: Runtime>(app: &AppHandle<R>, labels: &Labels) -> tauri::Result<Menu<R>> {
     let settings = MenuItemBuilder::with_id("settings", label(labels, "Settings…"))
         .accelerator("CmdOrCtrl+,")
@@ -140,6 +141,9 @@ fn build_with_labels<R: Runtime>(app: &AppHandle<R>, labels: &Labels) -> tauri::
     // [OBS rekordbox 7.2.14, issue #201].
     let missing =
         MenuItemBuilder::with_id("missing", label(labels, "Display All Missing Files")).build(app)?;
+    // GridBin: missing files and duplicates, one window.
+    let cleanup =
+        MenuItemBuilder::with_id("library-cleanup", label(labels, "Library Cleanup…")).build(app)?;
     // rekordbox's own two, worded as its File menu words them.
     let import_xml = MenuItemBuilder::with_id("import-xml", label(labels, "Import rekordbox xml…"))
         .build(app)?;
@@ -198,6 +202,7 @@ fn build_with_labels<R: Runtime>(app: &AppHandle<R>, labels: &Labels) -> tauri::
         .item(&import_itunes)
         .separator()
         .item(&missing)
+        .item(&cleanup)
         .separator()
         .item(&export_xml)
         .separator()

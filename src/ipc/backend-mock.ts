@@ -3464,7 +3464,10 @@ export function createMockBackend(options: MockOptions = {}): Backend {
         shown: found.slice(0, limit).map((rows) => ({
           title: rows[0]?.title ?? "",
           artist: rows[0]?.artist ?? "",
-          tracks: rows.map((row) => ({ id: row.id, path: `/Music/${row.title}.mp3`, durationSec: row.durationSec, present: true })),
+          tracks: rows.map((row, at) => ({
+            id: row.id, path: `/Music/${at ? "Downloads/" : ""}${row.title}.${at ? "mp3" : "aiff"}`, durationSec: row.durationSec, present: true,
+            playlists: at ? 0 : 2, bitrate: at ? 320 : 1411, sampleRate: 44_100, fileType: at ? 1 : 12, analysed: at === 0, rating: 0, dateAdded: at ? "2026-10-02" : "2026-01-15",
+          })),
         })),
       });
     },

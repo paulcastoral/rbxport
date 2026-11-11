@@ -4292,11 +4292,26 @@ pub async fn find_duplicates(state: State<'_, Arc<AppState>>, limit: u32) -> App
                         .iter()
                         .map(|&i| {
                             let path = library.folder_path.get(i);
+                            let in_lists = {
+                                let playlists = library.playlists();
+                                library
+                                    .playlists_containing(u32::try_from(i).unwrap_or(u32::MAX))
+                                    .into_iter()
+                                    .filter(|&p| !playlists.is_smart(p))
+                                    .count()
+                            };
                             DuplicateTrackDto {
                                 id: library.ids.get(i).copied().unwrap_or(0).to_string(),
                                 path: path.to_owned(),
                                 duration_sec: library.length_sec.get(i).copied().unwrap_or(0),
                                 present: !path.is_empty() && std::path::Path::new(path).is_file(),
+                                playlists: u32::try_from(in_lists).unwrap_or(u32::MAX),
+                                bitrate: library.bitrate.get(i).copied().unwrap_or(0),
+                                sample_rate: library.sample_rate.get(i).copied().unwrap_or(0),
+                                file_type: library.file_type.get(i).copied().unwrap_or(0),
+                                analysed: library.analysed.get(i).copied().unwrap_or(0) != 0,
+                                rating: library.rating.get(i).copied().unwrap_or(0),
+                                date_added: library.date_added.get(i).to_owned(),
                             }
                         })
                         .collect(),

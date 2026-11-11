@@ -1912,6 +1912,15 @@ export interface DuplicateTrack {
   durationSec: number;
   /** Whether the file is where the library says. */
   present: boolean;
+  /** For choosing a copy to keep (GridBin's Library Cleanup). Ordinary playlists holding it. */
+  playlists: number;
+  bitrate: number;
+  sampleRate: number;
+  /** rekordbox's FileType code: 1 MP3, 4 M4A, 5 FLAC, 11 WAV, 12 AIFF. */
+  fileType: number;
+  analysed: boolean;
+  rating: number;
+  dateAdded: string;
 }
 
 export interface DuplicateGroup {

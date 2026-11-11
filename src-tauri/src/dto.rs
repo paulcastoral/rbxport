@@ -269,6 +269,16 @@ pub struct DuplicateTrackDto {
     pub duration_sec: u32,
     /// Whether the file is where the library says.
     pub present: bool,
+    /// What `GridBin`'s Library Cleanup weighs when it suggests a copy to keep.
+    /// Ordinary playlists that hold this copy.
+    pub playlists: u32,
+    pub bitrate: u32,
+    pub sample_rate: u32,
+    /// rekordbox's `FileType` code (1 MP3, 4 M4A, 5 FLAC, 11 WAV, 12 AIFF).
+    pub file_type: u8,
+    pub analysed: bool,
+    pub rating: u8,
+    pub date_added: String,
 }
 
 /// Tracks that share a title and artist.
