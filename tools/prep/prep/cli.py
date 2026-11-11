@@ -22,9 +22,13 @@ import numpy as np
 
 from . import edits, grid
 
-# Share of a track's grid beats that must have a kick on them before Warp
-# trusts the grid: 98-99% on well-gridded tracks, 14% on one that drifted.
-MIN_GRID_MATCH = 0.7
+# How far the kicks may wander against a grid (sub-bass measure, ms) before
+# Warp bends the grid to follow them: steady tracks measure 7-27 ms (noise),
+# The Rendition (Good Clock Remix) under a straight 128 grid 390 ms.
+FOLLOW_DRIFT_MS = 50.0
+# After bending, what is left must be this small, or Warp refuses: 1-10 ms
+# on the tracks it was checked on.
+FOLLOWED_MAX_MS = 25.0
 
 TOOLS = ["drift", "tighten", "warp", "cues", "extend-intro", "extend-outro", "instrumental", "acapella",
          # older names, kept so earlier notes still work
@@ -65,18 +69,32 @@ def run(a) -> dict:
     if tool == "tighten":
         import librosa
         beats, nums = need_grid()
-        y, sr = librosa.load(str(track), sr=None, mono=True)
-        # Warp follows the track's grid, pulling each beat onto a kick within
-        # a few tens of ms. A grid that has drifted further than that (a wrong
-        # BPM, or the off-beat) would be locked into the new file, so it is
-        # refused instead.
-        match = grid.kick_match(beats, y, sr)
-        if match < MIN_GRID_MATCH:
-            raise ValueError(
-                f"The grid isn't on the kicks (only {match:.0%} of its beats land on one), so warping "
-                "would lock the error in. Fix the grid first: check the BPM and downbeat in GRID, "
-                "or re-analyze, then warp.")
+        # Beats are found at 22.05 kHz: plenty for kicks, and a 96 kHz file
+        # at full rate needs gigabytes for the analysis. The warp itself
+        # reads the original file at its own rate.
+        y, sr = librosa.load(str(track), sr=22050, mono=True)
+        # Warp maps the track's grid onto a straight one, so the grid has to
+        # follow the music. Where it drifts against the kicks (a track whose
+        # tempo wanders under a straight grid), the grid is first bent to
+        # follow them, keeping its start, where a DJ lines up bar 1. A drift
+        # that can't be followed is refused rather than locked in.
+        original_first = float(beats[0])
+        before = grid.drift_span(grid.drift_curve(beats, y, sr))
+        followed = False
+        if before > FOLLOW_DRIFT_MS:
+            bent = grid.follow_kicks(beats, y, sr)
+            after = grid.drift_span(grid.drift_curve(bent, y, sr)) if bent is not None else before
+            if bent is None or after > FOLLOWED_MAX_MS:
+                raise ValueError(
+                    f"The grid drifts off the kicks (by up to {before:.0f} ms) and the kicks are too unclear "
+                    "to follow. Fix the grid by hand first (BPM and bar 1 in GRID), then warp.")
+            beats, followed = bent, True
+        first_set = original_first
         smooth = grid.smooth_grid(beats, y, sr)
+        if followed:
+            # Bending only follows how the tempo changes; bar 1 stays where
+            # the DJ put it.
+            smooth = smooth - (smooth[0] - first_set)
         dst = out / f"{track.stem} (w).wav"
         r = edits.autowarp(str(track), str(dst), smooth, a.bpm)
         # The new file's grid is known exactly: every beat is where the warp
@@ -84,11 +102,13 @@ def run(a) -> dict:
         # re-analysis, which can land half a beat out on stretched audio.
         target = r.pop("beats")
         downbeats = [i for i, n in enumerate(nums) if n == 1]
-        r["grid_match"] = round(match, 3)
+        r["drift_before_ms"] = round(before, 1)
+        r["followed_kicks"] = followed
         r["first_beat_s"] = float(target[0])
         r["downbeat_s"] = float(target[downbeats[0]]) if downbeats else float(target[0])
+        note = f" The grid drifted {before:.0f} ms off the kicks, so it was bent to follow them first." if followed else ""
         return {"tool": tool, "files": [str(dst)], "details": r,
-                "summary": f"Warped to a steady {r['bpm']} BPM (at most {r['max_stretch_pct']}% stretch)."}
+                "summary": f"Warped to a steady {r['bpm']} BPM (at most {r['max_stretch_pct']}% stretch).{note}"}
 
     if tool in ("instrumental", "acapella"):
         s = _stems(track, out)
