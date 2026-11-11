@@ -48,6 +48,8 @@ describe("addToLibrary", () => {
       addLoop: vi.fn(() => Promise.resolve("loop-new")),
       setCueColour: vi.fn(() => Promise.resolve(undefined)),
       setCueComment: vi.fn(() => Promise.resolve(undefined)),
+      gridEdit: vi.fn(() => Promise.resolve({})),
+      gridLock: vi.fn(() => Promise.resolve({})),
     };
     const backend = {
       importPaths: vi.fn(() => Promise.resolve<ImportReport>({ imported: 1, skipped: [], tracks: [{ id: "new", title: "x" }], existing: [] })),
@@ -59,6 +61,7 @@ describe("addToLibrary", () => {
         ? [cue({ letter: "A", positionMs: 95_800, colour: "#E02823", comment: "Vocal" }), cue({ memory: true, positionMs: 78_000, outMs: 94_000 })]
         : [])),
       prepPlacements: vi.fn(() => Promise.resolve([{ playlist: "pl1", tracks: ["a", "orig", "b"] }])),
+      analyseTrack: vi.fn(() => Promise.resolve({})),
       edits,
     };
     return { backend, edits };
@@ -87,6 +90,24 @@ describe("addToLibrary", () => {
     expect(queued).toHaveBeenCalledTimes(1);
     expect(out.note).toContain("under the original in 1 playlist");
     expect(out.note).toContain("2 cues copied");
+  });
+
+  it("writes and locks a warp's own grid instead of trusting a re-analysis", async () => {
+    const { backend, edits } = fakeBackend();
+    const queued = vi.fn();
+    window.addEventListener(ANALYSE_EVENT, queued);
+    const out = await addToLibrary(backend as never, "orig", "tighten", {
+      tool: "tighten", summary: "", files: ["/m/rbx-prep/x (w).wav"],
+      details: { bpm: 128, first_beat_s: 0.023, downbeat_s: 0.023, timemap: [[0.023, 0.023], [0.491, 0.4918]] },
+    });
+    window.removeEventListener(ANALYSE_EVENT, queued);
+    expect(backend.analyseTrack).toHaveBeenCalledWith("new");
+    expect(edits.gridEdit).toHaveBeenNthCalledWith(1, "new", { kind: "tempo", bpmX100: 12_800, anchorMs: 23 }, { allowDynamic: true });
+    expect(edits.gridEdit).toHaveBeenNthCalledWith(2, "new", { kind: "align", timeMs: 23 });
+    expect(edits.gridEdit).toHaveBeenNthCalledWith(3, "new", { kind: "downbeat", timeMs: 23 });
+    expect(edits.gridLock).toHaveBeenCalledWith("new", true);
+    expect(queued).not.toHaveBeenCalled();
+    expect(out.note).toContain("grid locked at 128 BPM");
   });
 
   it("says why when the import takes nothing", async () => {

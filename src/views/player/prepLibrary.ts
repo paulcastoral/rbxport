@@ -34,7 +34,17 @@ export interface LibraryAdd {
   note: string;
 }
 
-type Prep = Pick<Backend, "importPaths" | "trackDetails" | "trackCues" | "prepPlacements" | "edits">;
+type Prep = Pick<Backend, "importPaths" | "trackDetails" | "trackCues" | "prepPlacements" | "analyseTrack" | "edits">;
+
+/** The grid a warp produced, from rbx-prep's details, or null for other tools. */
+export function warpGrid(tool: PrepTool, details: Record<string, unknown>): { bpm: number; firstBeatMs: number; downbeatMs: number } | null {
+  if (tool !== "tighten") return null;
+  const bpm = Number(details.bpm);
+  const first = Number(details.first_beat_s);
+  if (!Number.isFinite(bpm) || bpm <= 0 || !Number.isFinite(first)) return null;
+  const down = Number(details.downbeat_s);
+  return { bpm, firstBeatMs: Math.round(first * 1000), downbeatMs: Math.round((Number.isFinite(down) ? down : first) * 1000) };
+}
 
 /** A cue's time in the new file, or null when it falls outside it. */
 export function mapTime(tool: PrepTool, details: Record<string, unknown>, ms: number): number {
@@ -150,13 +160,30 @@ export async function addToLibrary(backend: Prep, original: string, tool: PrepTo
     await attempt("cues", async () => { cues += await copyCues(backend, original, id, tool, result.details); });
   }
 
-  if (added.length) {
+  let gridSet = false;
+  const warp = warpGrid(tool, result.details);
+  if (warp && added.length) {
+    // A warped file's grid is known exactly, so it is written, not guessed:
+    // analysed for its waveform and key, then given the warp's grid and
+    // locked so a later analysis cannot move it.
+    for (const id of added) {
+      await attempt("grid", async () => {
+        await backend.analyseTrack(id);
+        await backend.edits.gridEdit(id, { kind: "tempo", bpmX100: Math.round(warp.bpm * 100), anchorMs: warp.firstBeatMs }, { allowDynamic: true });
+        await backend.edits.gridEdit(id, { kind: "align", timeMs: warp.firstBeatMs });
+        await backend.edits.gridEdit(id, { kind: "downbeat", timeMs: warp.downbeatMs });
+        await backend.edits.gridLock(id, true);
+        gridSet = true;
+      });
+    }
+  } else if (added.length) {
     window.dispatchEvent(new CustomEvent(ANALYSE_EVENT, {
       detail: added.map((id) => ({ id, title: `${info.title} (${name})` })),
     }));
   }
 
   const parts = [added.length ? "Added to the library" : "Already in the library"];
+  if (gridSet && warp) parts.push(`grid locked at ${warp.bpm} BPM`);
   if (placed) parts.push(`under the original in ${placed} playlist${placed === 1 ? "" : "s"}`);
   if (cues) parts.push(`${cues} cue${cues === 1 ? "" : "s"} copied`);
   const note = `${parts.join(", ")}.${problems.length ? ` Couldn't copy: ${problems.join(", ")}.` : ""}`;

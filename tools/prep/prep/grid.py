@@ -85,3 +85,10 @@ def drift_report(t: np.ndarray) -> dict:
         "tempo_span_bpm": round(span, 2),
         "jitter_ms": round(jitter_ms, 1),
     }
+
+
+def kick_match(beats: np.ndarray, y: np.ndarray, sr: int) -> float:
+    """Share of grid beats with a kick within 35 ms: how far a grid can be trusted."""
+    env, dt = kick_env(y, sr)
+    o = offsets(beats, env, dt)
+    return float(np.mean(~np.isnan(o))) if len(o) else 0.0

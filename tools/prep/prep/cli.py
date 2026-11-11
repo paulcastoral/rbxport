@@ -22,6 +22,10 @@ import numpy as np
 
 from . import edits, grid
 
+# Share of a track's grid beats that must have a kick on them before Warp
+# trusts the grid: 98-99% on well-gridded tracks, 14% on one that drifted.
+MIN_GRID_MATCH = 0.7
+
 TOOLS = ["drift", "tighten", "warp", "cues", "extend-intro", "extend-outro", "instrumental", "acapella",
          # older names, kept so earlier notes still work
          "stems", "extend"]
@@ -60,12 +64,29 @@ def run(a) -> dict:
 
     if tool == "tighten":
         import librosa
-        beats, _ = need_grid()
+        beats, nums = need_grid()
         y, sr = librosa.load(str(track), sr=None, mono=True)
+        # Warp follows the track's grid, pulling each beat onto a kick within
+        # a few tens of ms. A grid that has drifted further than that (a wrong
+        # BPM, or the off-beat) would be locked into the new file, so it is
+        # refused instead.
+        match = grid.kick_match(beats, y, sr)
+        if match < MIN_GRID_MATCH:
+            raise ValueError(
+                f"The grid isn't on the kicks (only {match:.0%} of its beats land on one), so warping "
+                "would lock the error in. Fix the grid first: check the BPM and downbeat in GRID, "
+                "or re-analyze, then warp.")
         smooth = grid.smooth_grid(beats, y, sr)
         dst = out / f"{track.stem} (w).wav"
         r = edits.autowarp(str(track), str(dst), smooth, a.bpm)
-        r.pop("beats")
+        # The new file's grid is known exactly: every beat is where the warp
+        # put it. The app writes it onto the new track instead of trusting a
+        # re-analysis, which can land half a beat out on stretched audio.
+        target = r.pop("beats")
+        downbeats = [i for i, n in enumerate(nums) if n == 1]
+        r["grid_match"] = round(match, 3)
+        r["first_beat_s"] = float(target[0])
+        r["downbeat_s"] = float(target[downbeats[0]]) if downbeats else float(target[0])
         return {"tool": tool, "files": [str(dst)], "details": r,
                 "summary": f"Warped to a steady {r['bpm']} BPM (at most {r['max_stretch_pct']}% stretch)."}
 
