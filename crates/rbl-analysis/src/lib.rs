@@ -245,7 +245,7 @@ fn level(samples: &[f32]) -> (f32, f32) {
 
 /// How much of the opening beat a file may have cut off and still have that
 /// beat gridded at zero, as a share of the beat. rekordbox stops at 20 ms,
-/// and rbxport matched it; GridBin grids the first kick of an edit whose cut
+/// and rbxport matched it; `GridBin` grids the first kick of an edit whose cut
 /// lands up to a quarter of a beat into it (125 ms at 120 BPM), since a DJ
 /// edit or a rip often starts a little inside its first kick.
 const MAX_OPENING_CUT: f64 = 0.25;
