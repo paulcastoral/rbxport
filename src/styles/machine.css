@@ -1,0 +1,97 @@
+/*
+ * GridBin's "machine" theme: early-80s drum-machine hardware. A charcoal
+ * faceplate, orange silk-screen labels and outlines, square dark keys, red
+ * LEDs for anything live, and brown and grey as the secondary panel colours.
+ *
+ * It only re-points rbxport's tokens (tokens.css) and adds a few shared
+ * classes, so every view follows without touching its own CSS, and the
+ * classic look comes back by removing `data-theme="machine"` from <html>
+ * (see `src/lib/uiTheme.ts`). Waveform, phrase and hot-cue colours are left
+ * alone: they carry meaning a DJ reads at a glance.
+ */
+:root[data-theme="machine"] {
+  /* Palette */
+  --m-plate: #211E1D;      /* the faceplate */
+  --m-plate-deep: #171514; /* wells, fields, the player's ground */
+  --m-plate-raised: #2C2827;
+  --m-key: #2A2726;        /* a key's face */
+  --m-key-edge: #0C0B0A;   /* a key's shadowed rim */
+  --m-orange: #F26A12;     /* silk-screen ink: labels, outlines, the accent */
+  --m-orange-dim: #9E4A16; /* the same ink, worn: secondary rules */
+  --m-red: #C81D20;        /* LED housing */
+  --m-led: #FF2B1C;        /* a lit LED */
+  --m-grey: #424242;
+  --m-brown: #4A3328;
+  --m-cream: #EFE6DC;      /* text that is not a label */
+
+  /* rbxport's surfaces */
+  --c-titlebar: var(--m-plate-deep);
+  --c-black: var(--m-plate-deep);
+  --c-top: #1B1817;
+  --c-panel: var(--m-plate);
+  --c-button: var(--m-key);
+  --c-raised: var(--m-plate-raised);
+  --c-menu: #1B1817;
+  --c-menu-border: var(--m-orange);
+  --c-field: #0F0D0C;
+  --c-field-placeholder: #6E5A4C;
+
+  /* Ink */
+  --c-text: var(--m-cream);
+  --c-text-dim: #B29F91;
+  --c-icon-off: #9C8A7D;
+  --c-icon-on: var(--m-cream);
+  --c-pad-label: #8C7A6E;
+  --c-filter-label: #B29F91;
+  --c-mixer-label: #6B5C52;
+
+  /* One accent: orange where rekordbox has blue */
+  --c-accent: var(--m-orange);
+  --c-select: #5A2F16;
+  --c-tab-active: var(--m-orange);
+  --c-pad-active: var(--m-orange);
+  --c-filter-accent: var(--m-orange);
+  --c-device-tab-on: var(--m-orange);
+  --c-bars-label: var(--m-orange);
+  --c-meter-fill: var(--m-orange);
+  --c-mytag-check-on: var(--m-orange);
+  --c-sync-pending: #FFA066;
+  --c-outline: var(--m-orange-dim);
+  --c-rail-box: var(--m-orange-dim);
+  --c-cue-ring: var(--m-orange);
+
+  /* Live things are red LEDs */
+  --c-play-ring: #5A1513;
+  --c-play-ring-on: var(--m-led);
+  --c-error: var(--m-led);
+
+  /* Type: condensed, like panel lettering */
+  --f-ui: "Barlow Semi Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-label: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+}
+
+/* Every caps label in the app reads as silk-screen ink. */
+:root[data-theme="machine"] body {
+  background: var(--m-plate-deep);
+}
+:root[data-theme="machine"] button {
+  font-family: var(--f-label);
+  letter-spacing: 0.04em;
+}
+
+/* Scrollbars: a dark track, a worn-orange thumb. */
+:root[data-theme="machine"] ::-webkit-scrollbar-thumb {
+  background: #4A3A30;
+}
+:root[data-theme="machine"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--m-orange-dim);
+}
+
+/* The app's name where it is printed (status bar, top left), in panel ink. */
+:root[data-theme="machine"] [data-app-name] {
+  font-family: var(--f-label);
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--m-orange);
+}

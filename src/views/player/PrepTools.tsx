@@ -26,11 +26,11 @@ interface ToolSpec {
 }
 
 export const PREP_TOOLS: readonly ToolSpec[] = [
-  { id: "drift", label: "CHECK DRIFT", hint: "Steady or drifting?", group: "GRID" },
-  { id: "tighten", label: "TIGHTEN", hint: "Warp to a fixed BPM", group: "GRID" },
-  { id: "cues", label: "AUTO CUES", hint: "Places loop + red cue", group: "CUES", slow: true },
-  { id: "extend-intro", label: "EXT INTRO", hint: "Loop clean intro bars", group: "EDIT", slow: true },
-  { id: "extend-outro", label: "EXT OUTRO", hint: "Loop clean outro bars", group: "EDIT", slow: true },
+  { id: "drift", label: "CHECK DRIFT", hint: "Steady or drifting", group: "GRID" },
+  { id: "tighten", label: "TIGHTEN", hint: "Warp to fixed BPM", group: "GRID" },
+  { id: "cues", label: "AUTO CUES", hint: "Loop + red cue", group: "CUES", slow: true },
+  { id: "extend-intro", label: "EXT INTRO", hint: "Loop intro bars", group: "EDIT", slow: true },
+  { id: "extend-outro", label: "EXT OUTRO", hint: "Loop outro bars", group: "EDIT", slow: true },
   { id: "instrumental", label: "INSTRUMENTAL", hint: "Vocals removed", group: "STEMS", slow: true },
   { id: "acapella", label: "ACAPELLA", hint: "Vocals only", group: "STEMS", slow: true },
 ];
@@ -222,6 +222,30 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
     </button>
   );
 
+  // A key's LED: blinking while its tool runs, lit once it has worked on
+  // this track (and not been undone), dark otherwise.
+  const done = new Set(runs.filter((r) => r.result && !r.undone).map((r) => r.tool));
+  const key = (tool: ToolSpec) => {
+    const running = busy?.tool === tool.id;
+    return (
+      <button
+        key={tool.id}
+        type="button"
+        className={styles.key}
+        aria-label={tool.label}
+        disabled={disabled}
+        title={tool.hint + (tool.slow ? " (splits stems first: can take a few minutes)" : "")}
+        onClick={() => { void run(tool.id, options(tool.id)); }}
+      >
+        <span className={styles.caption}>{tool.label}</span>
+        <span className={styles.face}>
+          <span className={styles.led} data-state={running ? "busy" : done.has(tool.id) ? "on" : undefined} />
+        </span>
+        <span className={styles.hint}>{running ? "Working…" : tool.hint}</span>
+      </button>
+    );
+  };
+
   if (compact) {
     return (
       <div className={styles.compact} aria-label="Prep tools">
@@ -250,7 +274,9 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
   return (
     <div className={styles.panel} aria-label="Editor">
       <header className={styles.header}>
+        <span className={styles.rule} aria-hidden />
         <span className={styles.title}>EDITOR</span>
+        <span className={`${styles.rule} ${styles.ruleFill}`} aria-hidden />
         <span className={styles.track}>{trackId === null ? "Load a track into the deck to prep it." : title}</span>
         {busy ? (
           <button type="button" className={styles.stop} onClick={() => { void stop(); }}>
@@ -260,14 +286,14 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
       </header>
       <div className={styles.groups}>
         {GROUPS.map((group) => (
-          <section key={group} className={styles.group}>
-            <span className={styles.groupLabel}>{group}</span>
-            <div className={styles.buttons}>{PREP_TOOLS.filter((t) => t.group === group).map(button)}</div>
+          <section key={group} className={styles.group} aria-label={group}>
+            <span className={styles.groupTitle}>{group}</span>
+            <div className={styles.keys}>{PREP_TOOLS.filter((t) => t.group === group).map(key)}</div>
             {group === "CUES" ? (
               <label className={styles.option}>
-                LOOP
+                LOOP BARS
                 <select value={loopBars} onChange={(e) => setLoopBars(Number(e.target.value))}>
-                  {[4, 8, 16].map((n) => <option key={n} value={n}>{n} bars</option>)}
+                  {[4, 8, 16].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </label>
             ) : null}
@@ -280,7 +306,7 @@ export function PrepTools({ trackId, title, compact = false }: PrepToolsProps) {
                   </select>
                 </label>
                 <label className={styles.option}>
-                  ×
+                  REPEAT
                   <select value={repeats} onChange={(e) => setRepeats(Number(e.target.value))}>
                     {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>

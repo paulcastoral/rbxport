@@ -100,6 +100,7 @@ export function StatusBar({
   return (
     <footer className={styles.statusBar}>
       <span
+        data-app-name
         className={`${styles.logo} ${onOpenLog ? styles.logLink : ""}`}
         title={onOpenLog ? "Right-click to open the application log" : undefined}
         onContextMenu={onOpenLog ? (event) => {

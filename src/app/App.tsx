@@ -3261,7 +3261,7 @@ function AppBody() {
         {/* What the app is costing, in the corner: its own component, so a
             reading does not re-render the window around it. */}
         <AppCost className={styles.cost} />
-        <span className={styles.appName}>GridBin</span>
+        <span className={styles.appName} data-app-name>GridBin</span>
       </div>
       <ConnectedTopBar
         clock={clock}

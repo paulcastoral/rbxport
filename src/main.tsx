@@ -1,6 +1,13 @@
 import { StrictMode, Suspense, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import "@fontsource/barlow-condensed/500.css";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/barlow-condensed/700.css";
+import "@fontsource/barlow-semi-condensed/400.css";
+import "@fontsource/barlow-semi-condensed/500.css";
+import "@fontsource/barlow-semi-condensed/600.css";
 import "./styles/base.css";
+import { applyTheme } from "./lib/uiTheme";
 import { Localization } from "./i18n";
 import { syncRekordboxBrowseAtStartup } from "./lib/rekordboxBrowse";
 import { initializeSentry } from "./lib/sentry";
@@ -9,6 +16,9 @@ import * as Sentry from "@sentry/react";
 // Suppress the webview's Reload/Inspect menu in every app window. Leave
 // propagation intact so the app's context-menu handlers still receive it.
 window.addEventListener("contextmenu", (event) => event.preventDefault());
+
+// GridBin's look, before the first paint so the window never flashes the other one.
+applyTheme();
 
 const el = document.getElementById("root");
 if (!el) throw new Error("#root missing from index.html");
